@@ -1,0 +1,6 @@
+PySide6
+SQLAlchemy
+PyInstaller
+requests
+fpdf2
+python-dotenv

@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+*.db
+
+# Virtual Environment
+venv/
+.env/
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+logs/
+*.log
+
+# Build
+build/
+dist/
+*.spec
+
+# PyInstaller
+*.exe
+
+# Sistema
+Thumbs.db
+desktop.ini
+
+# Relatórios gerados
+relatorios/
+
+# Configurações locais sensíveis
+config/settings.local.json

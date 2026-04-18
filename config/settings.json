@@ -1,0 +1,22 @@
+{
+    "empresa": "Bar do Baleia",
+    "relatorios_path": "relatorios",
+    "tema": "moderno",
+    "estoque_minimo_padrao": 3,
+    "versiculo_api_url": "https://bible-api.com/random",
+    "versiculo_update_interval": 3600,
+    "empresa_nome_fantasia": "Bar do Baleia",
+    "empresa_razao_social": "Bar do Rafa",
+    "empresa_cnpj": "31.245.900/0001-56",
+    "empresa_telefone": "(11) 94525-6987",
+    "empresa_email": "bakleia@baleia.cm.br",
+    "empresa_endereco": "rua 1",
+    "empresa_numero": "123",
+    "empresa_complemento": "",
+    "empresa_bairro": "centro",
+    "empresa_cidade": "mogi das cruzes",
+    "empresa_estado": "SP",
+    "empresa_cep": "08779-584",
+    "ticket_rodape": "Jesus te Ama!!",
+    "relatorio_observacao": ""
+}
