@@ -210,19 +210,22 @@ Resultado esperado:
   - valor contado
   - diferença (sobra/falta)
 - Registra uma movimentação `FECHAMENTO_CAIXA` no fluxo (informativa)
+- Considera conciliação de **dinheiro em gaveta** separando meios de pagamento.
 
 ### 7.3 Registrar entrada extra
 1. Clique **+ Registrar Entrada Extra**.
-2. Informe valor e descrição.
+2. Informe valor, **meio de pagamento** e descrição.
 
 ### 7.4 Registrar despesa/retirada (SAÍDA)
 1. Clique **- Registrar Despesa / Retirada**.
 2. Selecione uma categoria (Tipos de Despesa).
-3. Informe valor e observação.
+3. Informe valor, meio e observação.
 
 Persistência e regras:
 - Saldo atual considera entradas e saídas conforme tipos: [fluxo_caixa/service.py](file:///c:/Projetos/baleia/app/modules/fluxo_caixa/service.py#L12-L29)
 - Registrar saída: [fluxo_caixa/service.py](file:///c:/Projetos/baleia/app/modules/fluxo_caixa/service.py#L31-L48)
+- `FluxoCaixa` registra também `meio_pagamento` para conciliação financeira.
+- No fechamento, o esperado de gaveta é baseado em entradas/saídas em **DINHEIRO**.
 
 ### 7.5 Filtrar e imprimir relatório do período
 1. Ajuste “De” e “Até”.

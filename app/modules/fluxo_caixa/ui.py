@@ -40,6 +40,15 @@ class MovimentacaoDialog(QDialog):
         self.valor_input.setRange(0.01, 99999.99)
         self.valor_input.setPrefix("R$ ")
         self.valor_input.setMinimumHeight(40)
+
+        self.meio_combo = QComboBox()
+        self.meio_combo.setMinimumHeight(40)
+        self.meio_combo.addItem("Dinheiro", "DINHEIRO")
+        self.meio_combo.addItem("Pix", "PIX")
+        self.meio_combo.addItem("Cartão", "CARTAO")
+        self.meio_combo.addItem("Outros", "OUTROS")
+        if self.tipo == "SAIDA":
+            self.meio_combo.setCurrentIndex(0)
         
         if self.tipo == "SAIDA":
             self.categoria_combo = QComboBox()
@@ -61,6 +70,7 @@ class MovimentacaoDialog(QDialog):
         self.descricao_input.setMinimumHeight(40)
 
         form_layout.addRow("Valor:", self.valor_input)
+        form_layout.addRow("Meio:", self.meio_combo)
         if self.tipo == "ENTRADA":
             form_layout.addRow("Descrição:", self.descricao_input)
         else:
@@ -98,7 +108,8 @@ class MovimentacaoDialog(QDialog):
         return {
             "valor": self.valor_input.value(),
             "descricao": final_desc,
-            "tipo_despesa_id": tipo_despesa_id
+            "tipo_despesa_id": tipo_despesa_id,
+            "meio_pagamento": self.meio_combo.currentData()
         }
 
 
@@ -180,11 +191,14 @@ class CaixaFechamentoDialog(QDialog):
         esperado = float(totals.get("saldo_esperado", 0.0))
         entradas = float(totals.get("entradas", 0.0))
         saidas = float(totals.get("saidas", 0.0))
+        entradas_din = float(totals.get("entradas_dinheiro", 0.0))
+        saidas_din = float(totals.get("saidas_dinheiro", 0.0))
 
         resumo = QLabel(
             f"Sessão #{self.sessao.id} aberta em {self.sessao.aberta_em.strftime('%d/%m/%Y %H:%M')}<br>"
             f"Troco (abertura): <b>R$ {float(self.sessao.valor_abertura or 0.0):.2f}</b><br>"
             f"Entradas (sessão): <b>R$ {entradas:.2f}</b> | Saídas (sessão): <b>R$ {saidas:.2f}</b><br>"
+            f"Entradas em dinheiro: <b>R$ {entradas_din:.2f}</b> | Saídas em dinheiro: <b>R$ {saidas_din:.2f}</b><br>"
             f"Saldo esperado no caixa: <b>R$ {esperado:.2f}</b>"
         )
         resumo.setWordWrap(True)
@@ -361,15 +375,16 @@ class FluxoCaixaWidget(QWidget):
         tabela_layout.addLayout(tabela_header)
 
         self.tabela = QTableWidget()
-        self.tabela.setColumnCount(5)
-        self.tabela.setHorizontalHeaderLabels(["Data/Hora", "Tipo", "Categoria", "Descrição", "Valor (R$)"])
+        self.tabela.setColumnCount(6)
+        self.tabela.setHorizontalHeaderLabels(["Data/Hora", "Tipo", "Meio", "Categoria", "Descrição", "Valor (R$)"])
         header = self.tabela.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.ResizeToContents)
         header.setSectionResizeMode(1, QHeaderView.ResizeToContents)
         header.setSectionResizeMode(2, QHeaderView.ResizeToContents)
-        header.setSectionResizeMode(3, QHeaderView.Interactive)
-        header.setSectionResizeMode(4, QHeaderView.ResizeToContents)
-        self.tabela.setColumnWidth(3, 520)
+        header.setSectionResizeMode(3, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(4, QHeaderView.Interactive)
+        header.setSectionResizeMode(5, QHeaderView.ResizeToContents)
+        self.tabela.setColumnWidth(4, 460)
         self.tabela.setHorizontalScrollMode(QTableWidget.ScrollPerPixel)
         self.tabela.setAlternatingRowColors(True)
         tabela_layout.addWidget(self.tabela)
@@ -414,6 +429,9 @@ class FluxoCaixaWidget(QWidget):
             tipo_item = QTableWidgetItem(mov.tipo)
             tipo_item.setTextAlignment(Qt.AlignCenter)
             
+            meio_item = QTableWidgetItem(mov.meio_pagamento or "---")
+            meio_item.setTextAlignment(Qt.AlignCenter)
+
             # Categoria (se houver)
             cat_nome = mov.categoria_despesa.nome if mov.categoria_despesa else "---"
             cat_item = QTableWidgetItem(cat_nome)
@@ -436,9 +454,10 @@ class FluxoCaixaWidget(QWidget):
 
             self.tabela.setItem(row, 0, data_item)
             self.tabela.setItem(row, 1, tipo_item)
-            self.tabela.setItem(row, 2, cat_item)
-            self.tabela.setItem(row, 3, desc_item)
-            self.tabela.setItem(row, 4, valor_item)
+            self.tabela.setItem(row, 2, meio_item)
+            self.tabela.setItem(row, 3, cat_item)
+            self.tabela.setItem(row, 4, desc_item)
+            self.tabela.setItem(row, 5, valor_item)
 
     def imprimir_historico(self):
         """Gera e imprime o relatório do fluxo de caixa por período com layout profissional."""
@@ -482,8 +501,9 @@ class FluxoCaixaWidget(QWidget):
                 <tr class='{zebra_class}'>
                     <td style='width: 15%;'>{mov.data_registro.strftime('%d/%m/%Y %H:%M')}</td>
                     <td style='width: 10%; font-weight: bold;'>{tipo_display}</td>
-                    <td style='width: 20%;'>{cat_nome}</td>
-                    <td style='width: 40%;'>{mov.descricao or '---'}</td>
+                    <td style='width: 10%; text-align:center;'>{mov.meio_pagamento or '---'}</td>
+                    <td style='width: 18%;'>{cat_nome}</td>
+                    <td style='width: 32%;'>{mov.descricao or '---'}</td>
                     <td style='width: 15%; text-align: right;' class='{color_class}'><b>{valor_f}</b></td>
                 </tr>
             """
@@ -586,7 +606,8 @@ class FluxoCaixaWidget(QWidget):
                     <tr>
                         <th>Data/Hora</th>
                         <th>Tipo</th>
-                        <th>Categoria</th>
+                    <th>Meio</th>
+                    <th>Categoria</th>
                         <th>Descrição</th>
                         <th style='text-align: right;'>Valor</th>
                     </tr>
@@ -647,12 +668,14 @@ class FluxoCaixaWidget(QWidget):
                 sucesso, msg = self.service.registrar_saida(
                     valor=data["valor"],
                     descricao=data["descricao"],
-                    tipo_despesa_id=data.get("tipo_despesa_id")
+                    tipo_despesa_id=data.get("tipo_despesa_id"),
+                    meio_pagamento=data.get("meio_pagamento")
                 )
             else:
                 sucesso, msg = self.service.registrar_entrada(
                     valor=data["valor"],
-                    descricao=data["descricao"]
+                    descricao=data["descricao"],
+                    meio_pagamento=data.get("meio_pagamento")
                 )
 
             if sucesso:

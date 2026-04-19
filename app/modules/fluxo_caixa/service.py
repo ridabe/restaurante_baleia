@@ -39,12 +39,13 @@ class FluxoCaixaService:
             return 0.0
 
     @staticmethod
-    def registrar_saida(valor, descricao, tipo_despesa_id=None):
+    def registrar_saida(valor, descricao, tipo_despesa_id=None, meio_pagamento="DINHEIRO"):
         """Registra uma saída de caixa (despesa)."""
         try:
             sessao_id = FluxoCaixaService._get_sessao_aberta_id()
             nova_saida = FluxoCaixa(
                 tipo='SAIDA',
+                meio_pagamento=(meio_pagamento or "DINHEIRO"),
                 valor=valor,
                 descricao=descricao,
                 tipo_despesa_id=tipo_despesa_id,
@@ -60,12 +61,13 @@ class FluxoCaixaService:
             return False, str(e)
 
     @staticmethod
-    def registrar_entrada(valor, descricao):
+    def registrar_entrada(valor, descricao, meio_pagamento="DINHEIRO"):
         """Registra uma entrada extra no caixa."""
         try:
             sessao_id = FluxoCaixaService._get_sessao_aberta_id()
             nova_entrada = FluxoCaixa(
                 tipo="ENTRADA",
+                meio_pagamento=(meio_pagamento or "DINHEIRO"),
                 valor=valor,
                 descricao=descricao,
                 caixa_sessao_id=sessao_id

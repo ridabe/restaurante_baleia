@@ -45,6 +45,7 @@ class CaixaSessaoService:
 
             mov = FluxoCaixa(
                 tipo="ABERTURA_CAIXA",
+                meio_pagamento="DINHEIRO",
                 valor=float(valor_abertura),
                 descricao=f"Abertura de caixa (Sessão #{sessao.id})",
                 caixa_sessao_id=sessao.id,
@@ -59,10 +60,16 @@ class CaixaSessaoService:
 
     @staticmethod
     def calcular_totais_sessao(sessao_id: int) -> dict:
-        """Calcula entradas/saídas da sessão (movimento) e saldo esperado."""
+        """Calcula totais da sessão (geral e dinheiro) e saldo esperado da gaveta."""
         sessao = db_session.query(CaixaSessao).filter(CaixaSessao.id == sessao_id).first()
         if not sessao:
-            return {"entradas": 0.0, "saidas": 0.0, "saldo_esperado": 0.0}
+            return {
+                "entradas": 0.0,
+                "saidas": 0.0,
+                "entradas_dinheiro": 0.0,
+                "saidas_dinheiro": 0.0,
+                "saldo_esperado": 0.0,
+            }
 
         entradas = (
             db_session.query(func.sum(FluxoCaixa.valor))
@@ -82,8 +89,40 @@ class CaixaSessaoService:
             .scalar()
             or 0.0
         )
-        saldo_esperado = float(sessao.valor_abertura or 0.0) + float(entradas) - float(saidas)
-        return {"entradas": float(entradas), "saidas": float(saidas), "saldo_esperado": float(saldo_esperado)}
+
+        entradas_dinheiro = (
+            db_session.query(func.sum(FluxoCaixa.valor))
+            .filter(
+                FluxoCaixa.caixa_sessao_id == sessao_id,
+                FluxoCaixa.tipo == "ENTRADA",
+                FluxoCaixa.meio_pagamento == "DINHEIRO",
+            )
+            .scalar()
+            or 0.0
+        )
+        saidas_dinheiro = (
+            db_session.query(func.sum(FluxoCaixa.valor))
+            .filter(
+                FluxoCaixa.caixa_sessao_id == sessao_id,
+                FluxoCaixa.tipo == "SAIDA",
+                FluxoCaixa.meio_pagamento == "DINHEIRO",
+            )
+            .scalar()
+            or 0.0
+        )
+
+        saldo_esperado = (
+            float(sessao.valor_abertura or 0.0)
+            + float(entradas_dinheiro)
+            - float(saidas_dinheiro)
+        )
+        return {
+            "entradas": float(entradas),
+            "saidas": float(saidas),
+            "entradas_dinheiro": float(entradas_dinheiro),
+            "saidas_dinheiro": float(saidas_dinheiro),
+            "saldo_esperado": float(saldo_esperado),
+        }
 
     @staticmethod
     def fechar_caixa(valor_contado: float, observacao: str = ""):
@@ -111,6 +150,7 @@ class CaixaSessaoService:
             )
             mov = FluxoCaixa(
                 tipo="FECHAMENTO_CAIXA",
+                meio_pagamento="DINHEIRO",
                 valor=0.0,
                 descricao=desc[:200],
                 caixa_sessao_id=sessao.id,
@@ -122,4 +162,3 @@ class CaixaSessaoService:
             db_session.rollback()
             logger.error(f"Erro ao fechar caixa: {e}")
             return False, str(e)
-

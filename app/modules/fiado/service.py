@@ -68,7 +68,7 @@ class FiadoService:
             return False, f"Erro ao registrar: {e}"
 
     @staticmethod
-    def pagar_divida(id_cliente, valor, descricao="Pagamento de dívida"):
+    def pagar_divida(id_cliente, valor, descricao="Pagamento de dívida", meio_pagamento="DINHEIRO"):
         """Registra um pagamento de dívida de um cliente."""
         try:
             cliente = FiadoService.buscar_cliente_por_id(id_cliente)
@@ -96,6 +96,8 @@ class FiadoService:
                 f"Pagamento de dívida | Cliente: {cliente.nome} | "
                 f"Pago: R$ {float(valor):.2f} | Saldo restante: R$ {saldo_restante:.2f}"
             )
+            if meio_pagamento:
+                descricao_fluxo += f" | Meio: {meio_pagamento}"
             if descricao:
                 descricao_fluxo += f" | Obs: {descricao}"
 
@@ -108,6 +110,7 @@ class FiadoService:
 
             novo_fluxo = FluxoCaixa(
                 tipo='ENTRADA',
+                meio_pagamento=(meio_pagamento or "DINHEIRO"),
                 valor=valor,
                 descricao=descricao_fluxo[:200],
                 caixa_sessao_id=sessao_id

@@ -51,6 +51,10 @@ def _apply_light_migrations():
         if not _sqlite_column_exists("vendas", "caixa_sessao_id"):
             _sqlite_add_column("vendas", "caixa_sessao_id INTEGER")
             logger.info("Migração aplicada: vendas.caixa_sessao_id")
+
+        if not _sqlite_column_exists("fluxo_caixa", "meio_pagamento"):
+            _sqlite_add_column("fluxo_caixa", "meio_pagamento VARCHAR(20)")
+            logger.info("Migração aplicada: fluxo_caixa.meio_pagamento")
     except Exception as e:
         logger.error(f"Erro em migração leve: {e}")
 

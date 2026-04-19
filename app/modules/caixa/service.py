@@ -9,6 +9,20 @@ class CaixaService:
     """Serviço para gerenciar vendas e sessões de caixa."""
 
     @staticmethod
+    def _map_metodo_para_meio(metodo_pagamento: str) -> str:
+        """Normaliza o método da venda para o campo estruturado de meio de pagamento."""
+        raw = (metodo_pagamento or "").strip().upper()
+        if raw in ("DINHEIRO",):
+            return "DINHEIRO"
+        if raw in ("PIX",):
+            return "PIX"
+        if raw in ("CARTAO", "CARTÃO"):
+            return "CARTAO"
+        if raw == "FIADO":
+            return "FIADO"
+        return "OUTROS"
+
+    @staticmethod
     def registrar_venda(itens_venda, metodo_pagamento, cliente_id=None, cliente_nome=None):
         """
         Registra uma venda, atualiza o estoque e o fluxo de caixa.
@@ -16,6 +30,7 @@ class CaixaService:
         """
         try:
             total_venda = sum(item['quantidade'] * item['preco'] for item in itens_venda)
+            meio_pagamento = CaixaService._map_metodo_para_meio(metodo_pagamento)
             try:
                 from app.modules.caixa_sessao.service import CaixaSessaoService
                 sessao = CaixaSessaoService.get_sessao_aberta()
@@ -76,6 +91,7 @@ class CaixaService:
             if metodo_pagamento != 'FIADO':
                 novo_fluxo = FluxoCaixa(
                     tipo='ENTRADA',
+                    meio_pagamento=meio_pagamento,
                     valor=total_venda,
                     descricao=f"Venda #{nova_venda.id} ({metodo_pagamento})",
                     caixa_sessao_id=sessao_id
@@ -86,6 +102,7 @@ class CaixaService:
                 # para rastreabilidade no histórico do fluxo de caixa.
                 novo_fluxo = FluxoCaixa(
                     tipo='VENDA_FIADO',
+                    meio_pagamento='FIADO',
                     valor=total_venda,
                     descricao=(
                         f"VENDA_FIADO venda_id={nova_venda.id} cliente_id={cliente_id or 0} "

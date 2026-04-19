@@ -121,6 +121,7 @@ class FluxoCaixa(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     tipo = Column(String(20)) # 'ENTRADA', 'SAIDA', 'ABERTURA_CAIXA', 'FECHAMENTO_CAIXA'
+    meio_pagamento = Column(String(20), nullable=True) # 'DINHEIRO', 'PIX', 'CARTAO', 'FIADO', 'OUTROS'
     valor = Column(Float, nullable=False)
     descricao = Column(String(200))
     data_registro = Column(DateTime, default=datetime.now)

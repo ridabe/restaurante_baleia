@@ -149,6 +149,11 @@ Regras de negócio:
   - Abertura registra `CaixaSessao` (ABERTO) e um lançamento `ABERTURA_CAIXA` no fluxo.
   - Fechamento calcula esperado (abertura + entradas - saídas) e registra `FECHAMENTO_CAIXA` no fluxo.
   - Movimentações e vendas podem ser vinculadas à sessão aberta via `caixa_sessao_id` (quando existir).
+- Fase 2 (estrutura de meio de pagamento):
+  - `FluxoCaixa` passa a registrar `meio_pagamento` (`DINHEIRO`, `PIX`, `CARTAO`, `FIADO`, `OUTROS`).
+  - Fechamento usa **saldo esperado em dinheiro**:
+    - `esperado_dinheiro = abertura + entradas_dinheiro - saídas_dinheiro`
+  - Conciliação da gaveta não depende de entradas não-dinheiro (PIX/CARTÃO).
 
 ### 5.7 Tipos de Despesa (Categorias)
 Funcionalidades:
@@ -203,6 +208,7 @@ Entidades principais (SQLAlchemy):
 - **Venda**: total e método, vínculo opcional com cliente
 - **ItemVenda**: itens por venda
 - **FluxoCaixa**: entradas/saídas e eventos de caixa
+- **FluxoCaixa.meio_pagamento**: campo estruturado para conciliação por forma de recebimento/pagamento
 - **TipoDespesa**: categorias para saídas
 - **CaixaSessao**: abertura/fechamento do caixa e consolidação por turno
 
@@ -237,7 +243,7 @@ Banco de dados:
 
 ## 12. Backlog Recomendado
 - Fechamento de caixa real (conferência, sangria, relatórios).
-- Fase 2 do caixa: meios de pagamento estruturados (DINHEIRO/PIX/CARTÃO) para conciliação física da gaveta.
+- Fase 2.1: detalhar conciliação por método (cartão por bandeira/adquirente, PIX por conta, recebimentos externos).
 - Auditoria de alterações (estoque/preço).
 - Perfil de usuário e permissões.
 - Exportação CSV/Excel.
