@@ -121,14 +121,25 @@ class CaixaWidget(QWidget):
         self.combo_cliente.setMinimumHeight(40)
         self.atualizar_combo_clientes()
         resumo_layout.addWidget(self.lbl_cliente)
-        resumo_layout.addWidget(self.combo_cliente)
+        cliente_layout = QHBoxLayout()
+        cliente_layout.setSpacing(10)
+
+        self.btn_refresh_clientes = QPushButton("↻")
+        self.btn_refresh_clientes.setObjectName("secondaryButton")
+        self.btn_refresh_clientes.setFixedSize(44, 40)
+        self.btn_refresh_clientes.setToolTip("Atualizar lista de clientes")
+        self.btn_refresh_clientes.clicked.connect(self.atualizar_combo_clientes)
+
+        cliente_layout.addWidget(self.combo_cliente, 1)
+        cliente_layout.addWidget(self.btn_refresh_clientes)
+        resumo_layout.addLayout(cliente_layout)
 
         btn_layout = QHBoxLayout()
         self.btn_limpar = QPushButton("Limpar")
         self.btn_limpar.setObjectName("secondaryButton")
         self.btn_limpar.clicked.connect(self.limpar_pedido)
         
-        self.btn_confirmar = QPushButton("CONFIRMAR")
+        self.btn_confirmar = QPushButton("GERAR PRÉVIA")
         self.btn_confirmar.setObjectName("actionButton")
         self.btn_confirmar.setMinimumHeight(50)
         self.btn_confirmar.clicked.connect(self.confirmar_pedido)
@@ -157,7 +168,7 @@ class CaixaWidget(QWidget):
         self.ticket_view.setMinimumHeight(250)
         ticket_layout.addWidget(self.ticket_view)
         
-        self.btn_receber = QPushButton("RECEBER PAGAMENTO")
+        self.btn_receber = QPushButton("FINALIZAR VENDA")
         self.btn_receber.setObjectName("primaryButton")
         self.btn_receber.setMinimumHeight(60)
         self.btn_receber.setEnabled(False)
@@ -187,7 +198,11 @@ class CaixaWidget(QWidget):
 
     def on_pagamento_changed(self, index):
         """Obriga seleção de cliente se for FIADO."""
-        pass # Implementado na finalização
+        metodo = self.combo_pagamento.currentText()
+        is_fiado = metodo == "FIADO"
+        self.lbl_cliente.setText("Cliente (Obrigatório):" if is_fiado else "Cliente (Opcional):")
+        if is_fiado:
+            self.atualizar_combo_clientes()
 
     def adicionar_item_pedido(self):
         """Adiciona o produto selecionado à lista temporária."""
@@ -284,6 +299,14 @@ class CaixaWidget(QWidget):
         data_hora = datetime.now().strftime("%d/%m/%Y %H:%M")
 
         ticket = build_ticket_header_html(settings=s)
+        if self.venda_confirmada and self.btn_receber.isEnabled():
+            ticket += (
+                "<div style='background-color:#DBEAFE; color:#1E40AF; "
+                "padding:6px 8px; margin: 0 0 10px 0; border-radius:6px; font-size:11px;'>"
+                "<b>Prévia do ticket:</b> a venda ainda não foi registrada. "
+                "Clique em <b>FINALIZAR VENDA</b> para concluir."
+                "</div>"
+            )
         ticket += f"Data: {data_hora}<br>"
         ticket += f"Cliente: {nome_cliente}<br>"
         ticket += "-"*35 + "<br>"

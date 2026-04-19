@@ -87,17 +87,27 @@ class FiadoService:
             )
             
             # Atualiza a dívida do cliente
-            cliente.divida_atual -= valor
+            divida_antes = float(cliente.divida_atual or 0.0)
+            cliente.divida_atual = max(0.0, divida_antes - float(valor))
             
             # Registra no Fluxo de Caixa como entrada
+            saldo_restante = float(cliente.divida_atual or 0.0)
+            descricao_fluxo = (
+                f"Pagamento de dívida | Cliente: {cliente.nome} | "
+                f"Pago: R$ {float(valor):.2f} | Saldo restante: R$ {saldo_restante:.2f}"
+            )
+            if descricao:
+                descricao_fluxo += f" | Obs: {descricao}"
+
             novo_fluxo = FluxoCaixa(
                 tipo='ENTRADA',
                 valor=valor,
-                descricao=f"Pagamento de dívida: {cliente.nome}"
+                descricao=descricao_fluxo[:200]
             )
             
             db_session.add(novo_pagamento)
             db_session.add(novo_fluxo)
+
             db_session.commit()
             logger.info(f"Pagamento de R$ {valor:.2f} recebido de: {cliente.nome}")
             return True, "Pagamento registrado com sucesso."

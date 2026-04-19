@@ -3,19 +3,21 @@ import logging
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
 from app.core.models import Base
+from app.core.resources import app_data_path
 
 # Configuração de logs
+os.makedirs(app_data_path("logs"), exist_ok=True)
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    filename='logs/database.log',
+    filename=app_data_path("logs", "database.log"),
     filemode='a'
 )
 logger = logging.getLogger('Database')
 
 # Caminho para o banco de dados
 DB_NAME = "database.db"
-DB_PATH = os.path.join(os.getcwd(), DB_NAME)
+DB_PATH = app_data_path(DB_NAME)
 DATABASE_URL = f"sqlite:///{DB_PATH}"
 
 # Criação do motor e da sessão
@@ -29,9 +31,10 @@ def init_db():
         # Garante que os diretórios necessários existam
         required_dirs = ['relatorios', 'config', 'logs']
         for d in required_dirs:
-            if not os.path.exists(d):
-                os.makedirs(d)
-                logger.info(f"Diretório criado: {d}")
+            full = app_data_path(d)
+            if not os.path.exists(full):
+                os.makedirs(full, exist_ok=True)
+                logger.info(f"Diretório criado: {full}")
 
         # Cria as tabelas no banco de dados
         Base.metadata.create_all(bind=engine)

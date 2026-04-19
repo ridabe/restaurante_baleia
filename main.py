@@ -6,14 +6,14 @@ from PySide6.QtGui import QIcon
 from app.core.database import init_db
 from app.core.config import init_config
 from app.core.branding import get_branding_context
+from app.core.resources import app_data_path
 from app.ui.main_window import MainWindow
 from app.ui.styles import GLOBAL_STYLE
 
 def setup_logging():
     """Configuração global de logs."""
-    log_dir = "logs"
-    if not os.path.exists(log_dir):
-        os.makedirs(log_dir)
+    log_dir = app_data_path("logs")
+    os.makedirs(log_dir, exist_ok=True)
     
     logging.basicConfig(
         level=logging.INFO,

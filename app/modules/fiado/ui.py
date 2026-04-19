@@ -146,9 +146,15 @@ class DetalhesFiadoDialog(QDialog):
         self.tabela = QTableWidget()
         self.tabela.setColumnCount(4)
         self.tabela.setHorizontalHeaderLabels(["Data", "Tipo", "Descrição", "Valor"])
-        self.tabela.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        header = self.tabela.horizontalHeader()
+        header.setSectionResizeMode(0, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(1, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(2, QHeaderView.Interactive)
+        header.setSectionResizeMode(3, QHeaderView.ResizeToContents)
+        header.setStretchLastSection(True)
         self.tabela.setEditTriggers(QTableWidget.NoEditTriggers)
         self.tabela.setAlternatingRowColors(True)
+        self.tabela.setWordWrap(True)
         
         # Preencher tabela com o histórico do cliente
         historico = sorted(self.cliente.fiados, key=lambda x: x.data_registro, reverse=True)
@@ -165,12 +171,16 @@ class DetalhesFiadoDialog(QDialog):
                 tipo_item.setForeground(QColor(22, 163, 74))
             self.tabela.setItem(row, 1, tipo_item)
             
-            self.tabela.setItem(row, 2, QTableWidgetItem(f.descricao or "---"))
+            desc = f.descricao or "---"
+            desc_item = QTableWidgetItem(desc)
+            desc_item.setToolTip(desc)
+            self.tabela.setItem(row, 2, desc_item)
             
             valor_item = QTableWidgetItem(f"R$ {f.valor:.2f}")
             valor_item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
             self.tabela.setItem(row, 3, valor_item)
 
+        self.tabela.resizeRowsToContents()
         layout.addWidget(self.tabela)
 
         resumo_layout = QHBoxLayout()

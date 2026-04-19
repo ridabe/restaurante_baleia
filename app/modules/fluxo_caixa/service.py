@@ -65,8 +65,8 @@ class FluxoCaixaService:
             return []
 
     @staticmethod
-    def get_movimentacoes_por_periodo(data_inicio, data_fim):
-        """Retorna todas as movimentações em um intervalo de datas."""
+    def get_movimentacoes_por_periodo(data_inicio, data_fim, incluir_venda_fiado: bool = False):
+        """Retorna movimentações em um intervalo de datas (por padrão, oculta VENDA_FIADO)."""
         try:
             # Garante que data_fim inclua todo o dia (até 23:59:59)
             if isinstance(data_fim, date) and not isinstance(data_fim, datetime):
@@ -79,10 +79,13 @@ class FluxoCaixaService:
             else:
                 data_inicio_dt = data_inicio
 
-            return db_session.query(FluxoCaixa).filter(
+            query = db_session.query(FluxoCaixa).filter(
                 FluxoCaixa.data_registro >= data_inicio_dt,
                 FluxoCaixa.data_registro <= data_fim_dt
-            ).order_by(FluxoCaixa.data_registro.desc()).all()
+            )
+            if not incluir_venda_fiado:
+                query = query.filter(FluxoCaixa.tipo != "VENDA_FIADO")
+            return query.order_by(FluxoCaixa.data_registro.desc()).all()
         except Exception as e:
             logger.error(f"Erro ao buscar movimentações por período: {e}")
             return []

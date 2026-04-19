@@ -1,18 +1,20 @@
 import os
 import json
 import logging
+from app.core.resources import app_data_path
 
 # Configuração de logs
+os.makedirs(app_data_path("logs"), exist_ok=True)
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    filename='logs/app.log',
+    filename=app_data_path("logs", "app.log"),
     filemode='a'
 )
 logger = logging.getLogger('Config')
 
 # Caminho para o arquivo de configurações
-CONFIG_DIR = "config"
+CONFIG_DIR = app_data_path("config")
 SETTINGS_FILE = os.path.join(CONFIG_DIR, "settings.json")
 
 # Configurações padrão

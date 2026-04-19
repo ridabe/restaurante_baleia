@@ -28,11 +28,14 @@ class CaixaService:
             db_session.flush() # Para obter o ID da venda
 
             # 2. Processar itens, baixar estoque e criar ItemVenda
+            itens_resumo = []
             for item in itens_venda:
                 produto = db_session.query(Produto).filter(Produto.id == item['produto_id']).first()
                 if not produto or produto.quantidade < item['quantidade']:
                     raise Exception(f"Estoque insuficiente para: {produto.nome if produto else 'Desconhecido'}")
                 
+                itens_resumo.append(f"{item['quantidade']}x {produto.nome}")
+
                 # Baixa estoque
                 produto.quantidade -= item['quantidade']
                 
@@ -53,7 +56,12 @@ class CaixaService:
                     # Registrar no histórico de fiados do cliente
                     # O FiadoService.registrar_fiado já incrementa a dívida do cliente internamente.
                     from app.modules.fiado.service import FiadoService
-                    FiadoService.registrar_fiado(cliente_id, total_venda, f"Venda #{nova_venda.id}")
+                    resumo_txt = ", ".join(itens_resumo)
+                    desc = (
+                        f"Venda #{nova_venda.id} (FIADO) cliente_id={cliente_id} "
+                        f"total=R$ {total_venda:.2f} Itens: {resumo_txt}"
+                    )
+                    FiadoService.registrar_fiado(cliente_id, total_venda, desc[:200])
                 else:
                     raise Exception("Cliente não selecionado para venda fiada.")
 
@@ -63,6 +71,18 @@ class CaixaService:
                     tipo='ENTRADA',
                     valor=total_venda,
                     descricao=f"Venda #{nova_venda.id} ({metodo_pagamento})"
+                )
+                db_session.add(novo_fluxo)
+            else:
+                # Registra a venda fiada como movimentação neutra (não altera saldo),
+                # para rastreabilidade no histórico do fluxo de caixa.
+                novo_fluxo = FluxoCaixa(
+                    tipo='VENDA_FIADO',
+                    valor=total_venda,
+                    descricao=(
+                        f"VENDA_FIADO venda_id={nova_venda.id} cliente_id={cliente_id or 0} "
+                        f"total={total_venda:.2f} Cliente: {cliente_nome or 'Não informado'}"
+                    )[:200]
                 )
                 db_session.add(novo_fluxo)
 

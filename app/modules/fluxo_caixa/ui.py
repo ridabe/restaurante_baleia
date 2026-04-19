@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, 
     QTableWidget, QTableWidgetItem, QMessageBox, QHeaderView, QFormLayout, 
-    QGroupBox, QDialog, QDoubleSpinBox, QFrame, QComboBox, QDateEdit
+    QGroupBox, QDialog, QDoubleSpinBox, QFrame, QComboBox, QDateEdit, QCheckBox
 )
 from PySide6.QtCore import Qt, QDate
 from PySide6.QtGui import QColor, QTextDocument, QPageSize
@@ -199,6 +199,11 @@ class FluxoCaixaWidget(QWidget):
         self.date_ate.setDate(QDate.currentDate())
         self.date_ate.setMinimumHeight(35)
         tabela_header.addWidget(self.date_ate)
+
+        self.chk_incluir_fiado = QCheckBox("Incluir vendas fiado (rastreio)")
+        self.chk_incluir_fiado.setChecked(False)
+        self.chk_incluir_fiado.setStyleSheet("color: #64748B; font-size: 12px;")
+        tabela_header.addWidget(self.chk_incluir_fiado)
         
         self.btn_filtrar = QPushButton("Filtrar")
         self.btn_filtrar.setObjectName("actionButton")
@@ -217,12 +222,25 @@ class FluxoCaixaWidget(QWidget):
         self.tabela = QTableWidget()
         self.tabela.setColumnCount(5)
         self.tabela.setHorizontalHeaderLabels(["Data/Hora", "Tipo", "Categoria", "Descrição", "Valor (R$)"])
-        self.tabela.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.tabela.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
+        header = self.tabela.horizontalHeader()
+        header.setSectionResizeMode(0, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(1, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(2, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(3, QHeaderView.Interactive)
+        header.setSectionResizeMode(4, QHeaderView.ResizeToContents)
+        self.tabela.setColumnWidth(3, 520)
+        self.tabela.setHorizontalScrollMode(QTableWidget.ScrollPerPixel)
         self.tabela.setAlternatingRowColors(True)
         tabela_layout.addWidget(self.tabela)
         
         layout.addWidget(tabela_container)
+
+    def aplicar_periodo(self, period_days: int):
+        """Aplica rapidamente um período padrão (Hoje/7/30 dias) e atualiza a tabela."""
+        days = 1 if period_days <= 1 else (30 if period_days >= 30 else 7)
+        self.date_ate.setDate(QDate.currentDate())
+        self.date_de.setDate(QDate.currentDate().addDays(-(days - 1)))
+        self.atualizar_dados()
 
     def atualizar_dados(self):
         """Atualiza todas as informações financeiras na tela."""
@@ -240,7 +258,11 @@ class FluxoCaixaWidget(QWidget):
         data_de = self.date_de.date().toPython()
         data_ate = self.date_ate.date().toPython()
         
-        movimentacoes = self.service.get_movimentacoes_por_periodo(data_de, data_ate)
+        movimentacoes = self.service.get_movimentacoes_por_periodo(
+            data_de,
+            data_ate,
+            incluir_venda_fiado=self.chk_incluir_fiado.isChecked()
+        )
         self.tabela.setRowCount(len(movimentacoes))
         
         for row, mov in enumerate(movimentacoes):
@@ -255,7 +277,9 @@ class FluxoCaixaWidget(QWidget):
             cat_item = QTableWidgetItem(cat_nome)
             cat_item.setTextAlignment(Qt.AlignCenter)
             
-            desc_item = QTableWidgetItem(mov.descricao or "---")
+            desc_text = mov.descricao or "---"
+            desc_item = QTableWidgetItem(desc_text)
+            desc_item.setToolTip(desc_text)
             
             valor_item = QTableWidgetItem(f"R$ {mov.valor:.2f}")
             valor_item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
@@ -263,6 +287,8 @@ class FluxoCaixaWidget(QWidget):
             if mov.tipo in ['SAIDA', 'FECHAMENTO_CAIXA']:
                 valor_item.setForeground(Qt.red)
                 valor_item.setBackground(QColor(254, 242, 242))
+            elif mov.tipo == 'VENDA_FIADO':
+                valor_item.setForeground(QColor(71, 85, 105))
             else:
                 valor_item.setForeground(QColor(22, 163, 74)) # Success Green
 
@@ -279,7 +305,11 @@ class FluxoCaixaWidget(QWidget):
 
         data_de = self.date_de.date().toPython()
         data_ate = self.date_ate.date().toPython()
-        movimentacoes = self.service.get_movimentacoes_por_periodo(data_de, data_ate)
+        movimentacoes = self.service.get_movimentacoes_por_periodo(
+            data_de,
+            data_ate,
+            incluir_venda_fiado=self.chk_incluir_fiado.isChecked()
+        )
         
         if not movimentacoes:
             QMessageBox.warning(self, "Aviso", "Não há movimentações no período selecionado.")
@@ -298,6 +328,9 @@ class FluxoCaixaWidget(QWidget):
                 total_entradas += mov.valor
                 tipo_display = "Entrada"
                 color_class = "text-green"
+            elif mov.tipo == 'VENDA_FIADO':
+                tipo_display = "Venda Fiado"
+                color_class = "text-gray"
             else:
                 total_saidas += mov.valor
                 tipo_display = "Saída"
@@ -356,6 +389,7 @@ class FluxoCaixaWidget(QWidget):
                 .zebra {{ background-color: #FBFDFF; }}
                 .text-green {{ color: #15803D; }}
                 .text-red {{ color: #DC2626; }}
+                .text-gray {{ color: #475569; }}
                 
                 .summary-container {{ 
                     margin-top: 40px;

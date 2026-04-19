@@ -9,7 +9,7 @@ from app.modules.estoque.ui import EstoqueWidget
 from app.modules.fiado.ui import FiadoWidget
 from app.modules.fluxo_caixa.ui import FluxoCaixaWidget
 from app.modules.configuracoes.tipos_despesa.ui import TiposDespesaWidget
-from app.ui.dashboard_widget import DashboardWidget
+from app.modules.dashboard.ui import DashboardWidget
 from app.ui.settings_ui import SettingsWidget
 from app.services.bible_service import BibleService
 from app.core.branding import get_branding_context
@@ -141,6 +141,8 @@ class MainWindow(QMainWindow):
         
         # Inicialização dos Widgets de cada módulo
         self.dashboard_widget = DashboardWidget()
+        if hasattr(self.dashboard_widget, "navigateRequested"):
+            self.dashboard_widget.navigateRequested.connect(self.on_dashboard_navigate)
         self.caixa_widget = CaixaWidget()
         self.estoque_widget = EstoqueWidget()
         self.fiado_widget = FiadoWidget()
@@ -160,6 +162,24 @@ class MainWindow(QMainWindow):
 
         # Inicia na tela de dashboard
         self.switch_page(0)
+
+    def on_dashboard_navigate(self, target: str, period_days: int):
+        """Atalhos do dashboard para abrir módulos com contexto (período sugerido)."""
+        mapping = {
+            "caixa": 1,
+            "estoque": 2,
+            "fiado": 3,
+            "fluxo_caixa": 4,
+            "tipos_despesa": 5,
+            "configuracoes": 6,
+        }
+        index = mapping.get(target)
+        if index is None:
+            return
+        self.switch_page(index)
+        widget = self.pages.currentWidget()
+        if target == "fluxo_caixa" and hasattr(widget, "aplicar_periodo"):
+            widget.aplicar_periodo(int(period_days or 7))
 
     def switch_page(self, index):
         """Alterna entre as páginas do StackedWidget e atualiza os botões."""
@@ -181,6 +201,10 @@ class MainWindow(QMainWindow):
             widget.atualizar_dados()
         if hasattr(widget, 'atualizar_combo_produtos'):
             widget.atualizar_combo_produtos()
+        if hasattr(widget, 'atualizar_busca_produtos'):
+            widget.atualizar_busca_produtos()
+        if hasattr(widget, 'atualizar_combo_clientes'):
+            widget.atualizar_combo_clientes()
 
     def update_bible_verse(self):
         """Busca e exibe um novo versículo bíblico."""
