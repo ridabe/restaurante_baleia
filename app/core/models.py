@@ -4,6 +4,25 @@ from datetime import datetime
 
 Base = declarative_base()
 
+class CaixaSessao(Base):
+    """Sessão de caixa (abertura/fechamento) para consolidação operacional e auditoria."""
+    __tablename__ = 'caixa_sessoes'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    aberta_em = Column(DateTime, default=datetime.now)
+    fechada_em = Column(DateTime, nullable=True)
+
+    valor_abertura = Column(Float, default=0.0)
+    valor_contado = Column(Float, nullable=True)
+    saldo_esperado = Column(Float, nullable=True)
+    diferenca = Column(Float, nullable=True)
+
+    status = Column(String(10), default="ABERTO")  # ABERTO | FECHADO
+    observacao = Column(String(200), nullable=True)
+
+    movimentacoes = relationship("FluxoCaixa", back_populates="caixa_sessao")
+    vendas = relationship("Venda", back_populates="caixa_sessao")
+
 class Produto(Base):
     """Modelo para representar produtos no estoque."""
     __tablename__ = 'produtos'
@@ -45,11 +64,13 @@ class Venda(Base):
     total = Column(Float, nullable=False)
     metodo_pagamento = Column(String(20)) # Dinheiro, Cartão, Pix, Fiado
     caixa_aberto_id = Column(Integer, ForeignKey('fluxo_caixa.id'))
+    caixa_sessao_id = Column(Integer, ForeignKey('caixa_sessoes.id'), nullable=True)
     cliente_id = Column(Integer, ForeignKey('clientes.id'), nullable=True)
     cliente_nome = Column(String(100), nullable=True) # Para histórico caso cliente seja deletado
 
     itens = relationship("ItemVenda", back_populates="venda")
     cliente = relationship("Cliente")
+    caixa_sessao = relationship("CaixaSessao", back_populates="vendas")
 
 class ItemVenda(Base):
     """Modelo para representar itens de uma venda."""
@@ -104,10 +125,12 @@ class FluxoCaixa(Base):
     descricao = Column(String(200))
     data_registro = Column(DateTime, default=datetime.now)
     saldo_momento = Column(Float)
+    caixa_sessao_id = Column(Integer, ForeignKey('caixa_sessoes.id'), nullable=True)
     
     # Vínculo com categoria de despesa (opcional, usado apenas em SAIDAs)
     tipo_despesa_id = Column(Integer, ForeignKey('tipos_despesa.id'), nullable=True)
     categoria_despesa = relationship("TipoDespesa", back_populates="movimentacoes")
+    caixa_sessao = relationship("CaixaSessao", back_populates="movimentacoes")
 
     def __repr__(self):
         return f"<FluxoCaixa(tipo='{self.tipo}', valor={self.valor}, data={self.data_registro})>"

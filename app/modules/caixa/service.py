@@ -16,11 +16,18 @@ class CaixaService:
         """
         try:
             total_venda = sum(item['quantidade'] * item['preco'] for item in itens_venda)
+            try:
+                from app.modules.caixa_sessao.service import CaixaSessaoService
+                sessao = CaixaSessaoService.get_sessao_aberta()
+                sessao_id = sessao.id if sessao else None
+            except Exception:
+                sessao_id = None
             
             # 1. Criar a Venda
             nova_venda = Venda(
                 total=total_venda,
                 metodo_pagamento=metodo_pagamento,
+                caixa_sessao_id=sessao_id,
                 cliente_id=cliente_id,
                 cliente_nome=cliente_nome
             )
@@ -70,7 +77,8 @@ class CaixaService:
                 novo_fluxo = FluxoCaixa(
                     tipo='ENTRADA',
                     valor=total_venda,
-                    descricao=f"Venda #{nova_venda.id} ({metodo_pagamento})"
+                    descricao=f"Venda #{nova_venda.id} ({metodo_pagamento})",
+                    caixa_sessao_id=sessao_id
                 )
                 db_session.add(novo_fluxo)
             else:
@@ -82,7 +90,8 @@ class CaixaService:
                     descricao=(
                         f"VENDA_FIADO venda_id={nova_venda.id} cliente_id={cliente_id or 0} "
                         f"total={total_venda:.2f} Cliente: {cliente_nome or 'Não informado'}"
-                    )[:200]
+                    )[:200],
+                    caixa_sessao_id=sessao_id
                 )
                 db_session.add(novo_fluxo)
 

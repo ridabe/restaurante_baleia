@@ -7,7 +7,7 @@ from sqlalchemy import func
 
 from app.core.config import load_settings
 from app.core.database import db_session
-from app.core.models import Cliente, FluxoCaixa, ItemVenda, Produto, TipoDespesa, Venda
+from app.core.models import CaixaSessao, Cliente, FluxoCaixa, ItemVenda, Produto, TipoDespesa, Venda
 
 logger = logging.getLogger("DashboardService")
 
@@ -52,7 +52,7 @@ class DashboardService:
         entradas_dia = (
             db_session.query(func.sum(FluxoCaixa.valor))
             .filter(
-                FluxoCaixa.tipo.in_(["ENTRADA", "ABERTURA_CAIXA"]),
+                FluxoCaixa.tipo == "ENTRADA",
                 FluxoCaixa.data_registro >= inicio_dia,
                 FluxoCaixa.data_registro <= fim_dia,
             )
@@ -62,7 +62,7 @@ class DashboardService:
         saidas_dia = (
             db_session.query(func.sum(FluxoCaixa.valor))
             .filter(
-                FluxoCaixa.tipo.in_(["SAIDA", "FECHAMENTO_CAIXA"]),
+                FluxoCaixa.tipo == "SAIDA",
                 FluxoCaixa.data_registro >= inicio_dia,
                 FluxoCaixa.data_registro <= fim_dia,
             )
@@ -74,7 +74,7 @@ class DashboardService:
         entradas_ontem = (
             db_session.query(func.sum(FluxoCaixa.valor))
             .filter(
-                FluxoCaixa.tipo.in_(["ENTRADA", "ABERTURA_CAIXA"]),
+                FluxoCaixa.tipo == "ENTRADA",
                 FluxoCaixa.data_registro >= inicio_ontem,
                 FluxoCaixa.data_registro <= fim_ontem,
             )
@@ -84,7 +84,7 @@ class DashboardService:
         saidas_ontem = (
             db_session.query(func.sum(FluxoCaixa.valor))
             .filter(
-                FluxoCaixa.tipo.in_(["SAIDA", "FECHAMENTO_CAIXA"]),
+                FluxoCaixa.tipo == "SAIDA",
                 FluxoCaixa.data_registro >= inicio_ontem,
                 FluxoCaixa.data_registro <= fim_ontem,
             )
@@ -121,25 +121,26 @@ class DashboardService:
         }
 
     def _get_status_caixa(self) -> dict:
-        """Determina status do caixa com base na última movimentação de abertura/fechamento."""
-        ultimo_evento = (
-            db_session.query(FluxoCaixa)
-            .filter(FluxoCaixa.tipo.in_(["ABERTURA_CAIXA", "FECHAMENTO_CAIXA"]))
-            .order_by(FluxoCaixa.data_registro.desc())
+        """Determina status do caixa com base na sessão de caixa (CaixaSessao)."""
+        aberta = (
+            db_session.query(CaixaSessao)
+            .filter(CaixaSessao.status == "ABERTO")
+            .order_by(CaixaSessao.aberta_em.desc())
             .first()
         )
-        if not ultimo_evento:
-            return {"label": "Não iniciado", "detalhe": "Sem abertura registrada"}
-
-        if ultimo_evento.tipo == "ABERTURA_CAIXA":
+        if aberta:
             return {
                 "label": "Caixa Aberto",
-                "detalhe": f"Aberto às {ultimo_evento.data_registro.strftime('%H:%M')}",
+                "detalhe": f"Aberto às {aberta.aberta_em.strftime('%H:%M')}",
             }
-        return {
-            "label": "Caixa Fechado",
-            "detalhe": f"Fechado às {ultimo_evento.data_registro.strftime('%H:%M')}",
-        }
+
+        ultima = db_session.query(CaixaSessao).order_by(CaixaSessao.aberta_em.desc()).first()
+        if not ultima:
+            return {"label": "Não iniciado", "detalhe": "Sem abertura registrada"}
+
+        if ultima.fechada_em:
+            return {"label": "Caixa Fechado", "detalhe": f"Fechado às {ultima.fechada_em.strftime('%H:%M')}"}
+        return {"label": "Caixa Fechado", "detalhe": "Sem fechamento registrado"}
 
     def _build_entradas_saidas_series(self, period_days: int) -> dict:
         """Monta série diária (últimos N dias) para gráfico de entradas x saídas."""
@@ -153,7 +154,7 @@ class DashboardService:
                 func.sum(FluxoCaixa.valor).label("valor"),
             )
             .filter(
-                FluxoCaixa.tipo.in_(["ENTRADA", "ABERTURA_CAIXA"]),
+                FluxoCaixa.tipo == "ENTRADA",
                 FluxoCaixa.data_registro >= start_dt,
                 FluxoCaixa.data_registro <= end_dt,
             )
@@ -166,7 +167,7 @@ class DashboardService:
                 func.sum(FluxoCaixa.valor).label("valor"),
             )
             .filter(
-                FluxoCaixa.tipo.in_(["SAIDA", "FECHAMENTO_CAIXA"]),
+                FluxoCaixa.tipo == "SAIDA",
                 FluxoCaixa.data_registro >= start_dt,
                 FluxoCaixa.data_registro <= end_dt,
             )

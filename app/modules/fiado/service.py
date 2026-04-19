@@ -99,10 +99,18 @@ class FiadoService:
             if descricao:
                 descricao_fluxo += f" | Obs: {descricao}"
 
+            try:
+                from app.modules.caixa_sessao.service import CaixaSessaoService
+                sessao = CaixaSessaoService.get_sessao_aberta()
+                sessao_id = sessao.id if sessao else None
+            except Exception:
+                sessao_id = None
+
             novo_fluxo = FluxoCaixa(
                 tipo='ENTRADA',
                 valor=valor,
-                descricao=descricao_fluxo[:200]
+                descricao=descricao_fluxo[:200],
+                caixa_sessao_id=sessao_id
             )
             
             db_session.add(novo_pagamento)

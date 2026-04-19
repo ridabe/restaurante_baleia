@@ -132,6 +132,7 @@ Regras de negócio:
 Funcionalidades:
 - Exibir saldo atual (entradas - saídas).
 - Exibir resumo mensal: total de entradas, total de saídas e saldo do mês.
+- Abrir e fechar sessão de caixa (turno) com conferência de valores.
 - Registrar:
   - Entrada extra (`FluxoCaixa.tipo='ENTRADA'`)
   - Saída/despesa (`FluxoCaixa.tipo='SAIDA'`) associando categoria quando aplicável
@@ -143,6 +144,11 @@ Regras de negócio:
   - Entradas consideradas: `ENTRADA`, `ABERTURA_CAIXA`
   - Saídas consideradas: `SAIDA`, `FECHAMENTO_CAIXA`
 - Saída pode vincular `tipo_despesa_id` (categoria).
+- Sessão de Caixa:
+  - Apenas uma sessão pode ficar aberta por vez (MVP).
+  - Abertura registra `CaixaSessao` (ABERTO) e um lançamento `ABERTURA_CAIXA` no fluxo.
+  - Fechamento calcula esperado (abertura + entradas - saídas) e registra `FECHAMENTO_CAIXA` no fluxo.
+  - Movimentações e vendas podem ser vinculadas à sessão aberta via `caixa_sessao_id` (quando existir).
 
 ### 5.7 Tipos de Despesa (Categorias)
 Funcionalidades:
@@ -198,6 +204,7 @@ Entidades principais (SQLAlchemy):
 - **ItemVenda**: itens por venda
 - **FluxoCaixa**: entradas/saídas e eventos de caixa
 - **TipoDespesa**: categorias para saídas
+- **CaixaSessao**: abertura/fechamento do caixa e consolidação por turno
 
 Banco de dados:
 - SQLite local: `database.db` no diretório de execução.
@@ -230,6 +237,7 @@ Banco de dados:
 
 ## 12. Backlog Recomendado
 - Fechamento de caixa real (conferência, sangria, relatórios).
+- Fase 2 do caixa: meios de pagamento estruturados (DINHEIRO/PIX/CARTÃO) para conciliação física da gaveta.
 - Auditoria de alterações (estoque/preço).
 - Perfil de usuário e permissões.
 - Exportação CSV/Excel.
