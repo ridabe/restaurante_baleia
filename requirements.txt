@@ -4,3 +4,5 @@ PyInstaller
 requests
 fpdf2
 python-dotenv
+psycopg2-binary
+alembic

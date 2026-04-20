@@ -48,8 +48,17 @@ main.py         # Ponto de entrada da aplicação
 Para gerar o executável para Windows:
 
 ```bash
+pyinstaller --noconsole --onefile --name "BarDoBaleia" --add-data "app;app" main.py
+```
+
+Opcional (ícone):
+- Converta um PNG para `.ico` (ex.: `app/img/logo_baleia.png` → `icon.ico`) e então use:
+
+```bash
 pyinstaller --noconsole --onefile --name "BarDoBaleia" --add-data "app;app" --icon=icon.ico main.py
 ```
+
+Se existir um `BarDoBaleia.spec` antigo apontando para `icon.ico`, apague o `.spec` e rode novamente.
 *(Nota: Certifique-se de que as pastas `config`, `logs`, `relatorios` e o arquivo `database.db` serão criados automaticamente na primeira execução no mesmo diretório do .exe)*
 
 ## 🧠 Boas Práticas

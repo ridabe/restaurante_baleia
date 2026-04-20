@@ -1,8 +1,10 @@
 import PyInstaller.__main__
 import os
+import importlib.util
 
 def build_executable():
     """Gera o executável .exe do sistema Bar do Baleia."""
+    
     
     # Nome do projeto
     app_name = "BarDoBaleia"
@@ -24,6 +26,11 @@ def build_executable():
     icon_path = os.path.join("app", "img", "logo_baleia.ico")
     if os.path.exists(icon_path):
         options.append(f'--icon={icon_path}')
+
+    # Prepara para migração futura para Postgres/Supabase quando o driver existir no ambiente.
+    if importlib.util.find_spec("psycopg2") is not None:
+        options.append("--hidden-import=psycopg2")
+        options.append("--hidden-import=psycopg2._psycopg")
 
     # Executar build
     try:
