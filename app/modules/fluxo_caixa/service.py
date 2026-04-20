@@ -10,6 +10,16 @@ class FluxoCaixaService:
     """Serviço para gerenciar entradas, saídas e relatórios financeiros."""
 
     @staticmethod
+    def _get_sessao_aberta_id():
+        """Retorna o id da sessão aberta (se existir), sem quebrar chamadas antigas."""
+        try:
+            from app.modules.caixa_sessao.service import CaixaSessaoService
+            sessao = CaixaSessaoService.get_sessao_aberta()
+            return sessao.id if sessao else None
+        except Exception:
+            return None
+
+    @staticmethod
     def get_saldo_atual():
         """Calcula o saldo atual baseado em todas as entradas e saídas."""
         try:
@@ -29,14 +39,17 @@ class FluxoCaixaService:
             return 0.0
 
     @staticmethod
-    def registrar_saida(valor, descricao, tipo_despesa_id=None):
+    def registrar_saida(valor, descricao, tipo_despesa_id=None, meio_pagamento="DINHEIRO"):
         """Registra uma saída de caixa (despesa)."""
         try:
+            sessao_id = FluxoCaixaService._get_sessao_aberta_id()
             nova_saida = FluxoCaixa(
                 tipo='SAIDA',
+                meio_pagamento=(meio_pagamento or "DINHEIRO"),
                 valor=valor,
                 descricao=descricao,
-                tipo_despesa_id=tipo_despesa_id
+                tipo_despesa_id=tipo_despesa_id,
+                caixa_sessao_id=sessao_id
             )
             db_session.add(nova_saida)
             db_session.commit()
@@ -45,6 +58,27 @@ class FluxoCaixaService:
         except Exception as e:
             db_session.rollback()
             logger.error(f"Erro ao registrar saída: {e}")
+            return False, str(e)
+
+    @staticmethod
+    def registrar_entrada(valor, descricao, meio_pagamento="DINHEIRO"):
+        """Registra uma entrada extra no caixa."""
+        try:
+            sessao_id = FluxoCaixaService._get_sessao_aberta_id()
+            nova_entrada = FluxoCaixa(
+                tipo="ENTRADA",
+                meio_pagamento=(meio_pagamento or "DINHEIRO"),
+                valor=valor,
+                descricao=descricao,
+                caixa_sessao_id=sessao_id
+            )
+            db_session.add(nova_entrada)
+            db_session.commit()
+            logger.info(f"Entrada de R$ {valor:.2f} registrada: {descricao}")
+            return True, "Entrada registrada com sucesso."
+        except Exception as e:
+            db_session.rollback()
+            logger.error(f"Erro ao registrar entrada: {e}")
             return False, str(e)
 
     @staticmethod

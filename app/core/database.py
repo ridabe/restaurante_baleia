@@ -25,6 +25,40 @@ engine = create_engine(DATABASE_URL, echo=False)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 db_session = scoped_session(SessionLocal)
 
+def _sqlite_column_exists(table_name: str, column_name: str) -> bool:
+    """Verifica existência de coluna via PRAGMA table_info (SQLite)."""
+    try:
+        with engine.connect() as conn:
+            rows = conn.exec_driver_sql(f"PRAGMA table_info({table_name})").fetchall()
+        return any(r[1] == column_name for r in rows)
+    except Exception:
+        return False
+
+
+def _sqlite_add_column(table_name: str, ddl: str):
+    """Adiciona coluna com ALTER TABLE no SQLite (DDL simples)."""
+    with engine.connect() as conn:
+        conn.exec_driver_sql(f"ALTER TABLE {table_name} ADD COLUMN {ddl}")
+
+
+def _apply_light_migrations():
+    """Aplica migrações leves para compatibilidade com SQLite sem Alembic."""
+    try:
+        if not _sqlite_column_exists("fluxo_caixa", "caixa_sessao_id"):
+            _sqlite_add_column("fluxo_caixa", "caixa_sessao_id INTEGER")
+            logger.info("Migração aplicada: fluxo_caixa.caixa_sessao_id")
+
+        if not _sqlite_column_exists("vendas", "caixa_sessao_id"):
+            _sqlite_add_column("vendas", "caixa_sessao_id INTEGER")
+            logger.info("Migração aplicada: vendas.caixa_sessao_id")
+
+        if not _sqlite_column_exists("fluxo_caixa", "meio_pagamento"):
+            _sqlite_add_column("fluxo_caixa", "meio_pagamento VARCHAR(20)")
+            logger.info("Migração aplicada: fluxo_caixa.meio_pagamento")
+    except Exception as e:
+        logger.error(f"Erro em migração leve: {e}")
+
+
 def init_db():
     """Inicializa o banco de dados e cria todas as tabelas se não existirem."""
     try:
@@ -38,6 +72,7 @@ def init_db():
 
         # Cria as tabelas no banco de dados
         Base.metadata.create_all(bind=engine)
+        _apply_light_migrations()
         
         # Inserir categorias de despesas padrão se a tabela estiver vazia
         from app.core.models import TipoDespesa

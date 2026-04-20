@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, 
     QTableWidget, QTableWidgetItem, QMessageBox, QHeaderView, QFormLayout, 
-    QDialog, QDoubleSpinBox, QFrame
+    QDialog, QDoubleSpinBox, QFrame, QComboBox
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QTextDocument, QColor, QPageSize
@@ -98,7 +98,15 @@ class PagamentoDialog(QDialog):
         self.descricao_input = QLineEdit()
         self.descricao_input.setPlaceholderText("Ex: Pago via Pix / Dinheiro")
 
+        self.meio_input = QComboBox()
+        self.meio_input.setMinimumHeight(40)
+        self.meio_input.addItem("Dinheiro", "DINHEIRO")
+        self.meio_input.addItem("Pix", "PIX")
+        self.meio_input.addItem("Cartão", "CARTAO")
+        self.meio_input.addItem("Outros", "OUTROS")
+
         form_layout.addRow("Valor Recebido:", self.valor_input)
+        form_layout.addRow("Meio de Pagamento:", self.meio_input)
         form_layout.addRow("Observação:", self.descricao_input)
 
         layout.addLayout(form_layout)
@@ -122,7 +130,8 @@ class PagamentoDialog(QDialog):
     def get_data(self):
         return {
             "valor": self.valor_input.value(),
-            "descricao": self.descricao_input.text() or "Pagamento de dívida"
+            "descricao": self.descricao_input.text() or "Pagamento de dívida",
+            "meio_pagamento": self.meio_input.currentData()
         }
 
 class DetalhesFiadoDialog(QDialog):

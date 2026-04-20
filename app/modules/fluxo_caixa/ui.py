@@ -11,6 +11,7 @@ from app.core.config import load_settings
 from app.core.branding import build_report_header_html
 from app.modules.fluxo_caixa.service import FluxoCaixaService
 from app.modules.configuracoes.tipos_despesa.service import TipoDespesaService
+from app.modules.caixa_sessao.service import CaixaSessaoService
 
 class MovimentacaoDialog(QDialog):
     """Diálogo para registrar uma saída (despesa) ou entrada extra."""
@@ -39,6 +40,15 @@ class MovimentacaoDialog(QDialog):
         self.valor_input.setRange(0.01, 99999.99)
         self.valor_input.setPrefix("R$ ")
         self.valor_input.setMinimumHeight(40)
+
+        self.meio_combo = QComboBox()
+        self.meio_combo.setMinimumHeight(40)
+        self.meio_combo.addItem("Dinheiro", "DINHEIRO")
+        self.meio_combo.addItem("Pix", "PIX")
+        self.meio_combo.addItem("Cartão", "CARTAO")
+        self.meio_combo.addItem("Outros", "OUTROS")
+        if self.tipo == "SAIDA":
+            self.meio_combo.setCurrentIndex(0)
         
         if self.tipo == "SAIDA":
             self.categoria_combo = QComboBox()
@@ -60,6 +70,7 @@ class MovimentacaoDialog(QDialog):
         self.descricao_input.setMinimumHeight(40)
 
         form_layout.addRow("Valor:", self.valor_input)
+        form_layout.addRow("Meio:", self.meio_combo)
         if self.tipo == "ENTRADA":
             form_layout.addRow("Descrição:", self.descricao_input)
         else:
@@ -97,8 +108,139 @@ class MovimentacaoDialog(QDialog):
         return {
             "valor": self.valor_input.value(),
             "descricao": final_desc,
-            "tipo_despesa_id": tipo_despesa_id
+            "tipo_despesa_id": tipo_despesa_id,
+            "meio_pagamento": self.meio_combo.currentData()
         }
+
+
+class CaixaAberturaDialog(QDialog):
+    """Diálogo para abertura de caixa com valor inicial e observação."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Abertura de Caixa")
+        self.setMinimumSize(460, 260)
+        self.init_ui()
+
+    def init_ui(self):
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(30, 30, 30, 30)
+        layout.setSpacing(16)
+
+        title = QLabel("Abrir Caixa")
+        title.setObjectName("headerTitle")
+        layout.addWidget(title)
+
+        form = QFormLayout()
+        form.setSpacing(14)
+
+        self.valor_input = QDoubleSpinBox()
+        self.valor_input.setRange(0.0, 999999.99)
+        self.valor_input.setPrefix("R$ ")
+        self.valor_input.setDecimals(2)
+        self.valor_input.setMinimumHeight(40)
+        form.addRow("Valor de abertura (troco):", self.valor_input)
+
+        self.obs_input = QLineEdit()
+        self.obs_input.setPlaceholderText("Opcional (ex.: Troco inicial conferido)")
+        self.obs_input.setMinimumHeight(40)
+        form.addRow("Observação:", self.obs_input)
+
+        layout.addLayout(form)
+
+        buttons_layout = QHBoxLayout()
+        buttons_layout.addStretch()
+
+        btn_cancel = QPushButton("Cancelar")
+        btn_cancel.setObjectName("secondaryButton")
+        btn_cancel.clicked.connect(self.reject)
+
+        btn_ok = QPushButton("Abrir")
+        btn_ok.setObjectName("primaryButton")
+        btn_ok.clicked.connect(self.accept)
+
+        buttons_layout.addWidget(btn_cancel)
+        buttons_layout.addWidget(btn_ok)
+        layout.addLayout(buttons_layout)
+
+    def get_data(self):
+        """Retorna valor de abertura e observação."""
+        return float(self.valor_input.value()), self.obs_input.text()
+
+
+class CaixaFechamentoDialog(QDialog):
+    """Diálogo para fechamento de caixa com conferência de saldo esperado."""
+
+    def __init__(self, parent=None, sessao=None):
+        super().__init__(parent)
+        self.sessao = sessao
+        self.setWindowTitle("Fechamento de Caixa")
+        self.setMinimumSize(520, 340)
+        self.init_ui()
+
+    def init_ui(self):
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(30, 30, 30, 30)
+        layout.setSpacing(16)
+
+        title = QLabel("Fechar Caixa")
+        title.setObjectName("headerTitle")
+        layout.addWidget(title)
+
+        totals = CaixaSessaoService.calcular_totais_sessao(self.sessao.id)
+        esperado = float(totals.get("saldo_esperado", 0.0))
+        entradas = float(totals.get("entradas", 0.0))
+        saidas = float(totals.get("saidas", 0.0))
+        entradas_din = float(totals.get("entradas_dinheiro", 0.0))
+        saidas_din = float(totals.get("saidas_dinheiro", 0.0))
+
+        resumo = QLabel(
+            f"Sessão #{self.sessao.id} aberta em {self.sessao.aberta_em.strftime('%d/%m/%Y %H:%M')}<br>"
+            f"Troco (abertura): <b>R$ {float(self.sessao.valor_abertura or 0.0):.2f}</b><br>"
+            f"Entradas (sessão): <b>R$ {entradas:.2f}</b> | Saídas (sessão): <b>R$ {saidas:.2f}</b><br>"
+            f"Entradas em dinheiro: <b>R$ {entradas_din:.2f}</b> | Saídas em dinheiro: <b>R$ {saidas_din:.2f}</b><br>"
+            f"Saldo esperado no caixa: <b>R$ {esperado:.2f}</b>"
+        )
+        resumo.setWordWrap(True)
+        resumo.setStyleSheet("font-size: 12px; color: #475569;")
+        layout.addWidget(resumo)
+
+        form = QFormLayout()
+        form.setSpacing(14)
+
+        self.valor_contado = QDoubleSpinBox()
+        self.valor_contado.setRange(0.0, 999999.99)
+        self.valor_contado.setPrefix("R$ ")
+        self.valor_contado.setDecimals(2)
+        self.valor_contado.setMinimumHeight(40)
+        self.valor_contado.setValue(esperado)
+        form.addRow("Valor contado (gaveta):", self.valor_contado)
+
+        self.obs_input = QLineEdit()
+        self.obs_input.setPlaceholderText("Opcional (ex.: Diferença por sangria/erro)")
+        self.obs_input.setMinimumHeight(40)
+        form.addRow("Observação:", self.obs_input)
+
+        layout.addLayout(form)
+
+        buttons_layout = QHBoxLayout()
+        buttons_layout.addStretch()
+
+        btn_cancel = QPushButton("Cancelar")
+        btn_cancel.setObjectName("secondaryButton")
+        btn_cancel.clicked.connect(self.reject)
+
+        btn_ok = QPushButton("Fechar")
+        btn_ok.setObjectName("dangerButton")
+        btn_ok.clicked.connect(self.accept)
+
+        buttons_layout.addWidget(btn_cancel)
+        buttons_layout.addWidget(btn_ok)
+        layout.addLayout(buttons_layout)
+
+    def get_data(self):
+        """Retorna valor contado e observação."""
+        return float(self.valor_contado.value()), self.obs_input.text()
 
 class FluxoCaixaWidget(QWidget):
     """Interface do Fluxo de Caixa / Relatórios Financeiros."""
@@ -150,6 +292,16 @@ class FluxoCaixaWidget(QWidget):
 
         # Ações do Fluxo
         acoes_layout = QHBoxLayout()
+
+        self.btn_abrir_caixa = QPushButton("Abrir Caixa")
+        self.btn_abrir_caixa.setObjectName("primaryButton")
+        self.btn_abrir_caixa.setMinimumHeight(45)
+        self.btn_abrir_caixa.clicked.connect(self.abrir_caixa)
+
+        self.btn_fechar_caixa = QPushButton("Fechar Caixa")
+        self.btn_fechar_caixa.setObjectName("secondaryButton")
+        self.btn_fechar_caixa.setMinimumHeight(45)
+        self.btn_fechar_caixa.clicked.connect(self.fechar_caixa)
         
         self.btn_saida = QPushButton("  - Registrar Despesa / Retirada")
         self.btn_saida.setObjectName("dangerButton")
@@ -161,6 +313,9 @@ class FluxoCaixaWidget(QWidget):
         self.btn_entrada.setMinimumHeight(45)
         self.btn_entrada.clicked.connect(lambda: self.abrir_dialogo_movimentacao("ENTRADA"))
         
+        acoes_layout.addWidget(self.btn_abrir_caixa)
+        acoes_layout.addWidget(self.btn_fechar_caixa)
+        acoes_layout.addSpacing(10)
         acoes_layout.addWidget(self.btn_entrada)
         acoes_layout.addWidget(self.btn_saida)
         acoes_layout.addStretch()
@@ -220,15 +375,16 @@ class FluxoCaixaWidget(QWidget):
         tabela_layout.addLayout(tabela_header)
 
         self.tabela = QTableWidget()
-        self.tabela.setColumnCount(5)
-        self.tabela.setHorizontalHeaderLabels(["Data/Hora", "Tipo", "Categoria", "Descrição", "Valor (R$)"])
+        self.tabela.setColumnCount(6)
+        self.tabela.setHorizontalHeaderLabels(["Data/Hora", "Tipo", "Meio", "Categoria", "Descrição", "Valor (R$)"])
         header = self.tabela.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.ResizeToContents)
         header.setSectionResizeMode(1, QHeaderView.ResizeToContents)
         header.setSectionResizeMode(2, QHeaderView.ResizeToContents)
-        header.setSectionResizeMode(3, QHeaderView.Interactive)
-        header.setSectionResizeMode(4, QHeaderView.ResizeToContents)
-        self.tabela.setColumnWidth(3, 520)
+        header.setSectionResizeMode(3, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(4, QHeaderView.Interactive)
+        header.setSectionResizeMode(5, QHeaderView.ResizeToContents)
+        self.tabela.setColumnWidth(4, 460)
         self.tabela.setHorizontalScrollMode(QTableWidget.ScrollPerPixel)
         self.tabela.setAlternatingRowColors(True)
         tabela_layout.addWidget(self.tabela)
@@ -244,6 +400,7 @@ class FluxoCaixaWidget(QWidget):
 
     def atualizar_dados(self):
         """Atualiza todas as informações financeiras na tela."""
+        self.atualizar_status_caixa()
         # 1. Saldo Atual
         saldo = self.service.get_saldo_atual()
         self.lbl_saldo.setText(f"R$ {saldo:.2f}")
@@ -272,6 +429,9 @@ class FluxoCaixaWidget(QWidget):
             tipo_item = QTableWidgetItem(mov.tipo)
             tipo_item.setTextAlignment(Qt.AlignCenter)
             
+            meio_item = QTableWidgetItem(mov.meio_pagamento or "---")
+            meio_item.setTextAlignment(Qt.AlignCenter)
+
             # Categoria (se houver)
             cat_nome = mov.categoria_despesa.nome if mov.categoria_despesa else "---"
             cat_item = QTableWidgetItem(cat_nome)
@@ -294,9 +454,10 @@ class FluxoCaixaWidget(QWidget):
 
             self.tabela.setItem(row, 0, data_item)
             self.tabela.setItem(row, 1, tipo_item)
-            self.tabela.setItem(row, 2, cat_item)
-            self.tabela.setItem(row, 3, desc_item)
-            self.tabela.setItem(row, 4, valor_item)
+            self.tabela.setItem(row, 2, meio_item)
+            self.tabela.setItem(row, 3, cat_item)
+            self.tabela.setItem(row, 4, desc_item)
+            self.tabela.setItem(row, 5, valor_item)
 
     def imprimir_historico(self):
         """Gera e imprime o relatório do fluxo de caixa por período com layout profissional."""
@@ -340,8 +501,9 @@ class FluxoCaixaWidget(QWidget):
                 <tr class='{zebra_class}'>
                     <td style='width: 15%;'>{mov.data_registro.strftime('%d/%m/%Y %H:%M')}</td>
                     <td style='width: 10%; font-weight: bold;'>{tipo_display}</td>
-                    <td style='width: 20%;'>{cat_nome}</td>
-                    <td style='width: 40%;'>{mov.descricao or '---'}</td>
+                    <td style='width: 10%; text-align:center;'>{mov.meio_pagamento or '---'}</td>
+                    <td style='width: 18%;'>{cat_nome}</td>
+                    <td style='width: 32%;'>{mov.descricao or '---'}</td>
                     <td style='width: 15%; text-align: right;' class='{color_class}'><b>{valor_f}</b></td>
                 </tr>
             """
@@ -444,7 +606,8 @@ class FluxoCaixaWidget(QWidget):
                     <tr>
                         <th>Data/Hora</th>
                         <th>Tipo</th>
-                        <th>Categoria</th>
+                    <th>Meio</th>
+                    <th>Categoria</th>
                         <th>Descrição</th>
                         <th style='text-align: right;'>Valor</th>
                     </tr>
@@ -505,25 +668,50 @@ class FluxoCaixaWidget(QWidget):
                 sucesso, msg = self.service.registrar_saida(
                     valor=data["valor"],
                     descricao=data["descricao"],
-                    tipo_despesa_id=data.get("tipo_despesa_id")
+                    tipo_despesa_id=data.get("tipo_despesa_id"),
+                    meio_pagamento=data.get("meio_pagamento")
                 )
             else:
-                # Registro de ENTRADA extra
-                from app.core.database import db_session
-                from app.core.models import FluxoCaixa
-                try:
-                    nova_entrada = FluxoCaixa(
-                        tipo='ENTRADA',
-                        valor=data['valor'],
-                        descricao=data['descricao']
-                    )
-                    db_session.add(nova_entrada)
-                    db_session.commit()
-                    sucesso, msg = True, "Entrada registrada com sucesso."
-                except Exception as e:
-                    db_session.rollback()
-                    sucesso, msg = False, str(e)
+                sucesso, msg = self.service.registrar_entrada(
+                    valor=data["valor"],
+                    descricao=data["descricao"],
+                    meio_pagamento=data.get("meio_pagamento")
+                )
 
+            if sucesso:
+                self.atualizar_dados()
+            else:
+                QMessageBox.critical(self, "Erro", msg)
+
+    def atualizar_status_caixa(self):
+        """Atualiza estado dos botões de abrir/fechar conforme sessão atual."""
+        sessao = CaixaSessaoService.get_sessao_aberta()
+        is_open = sessao is not None
+        self.btn_abrir_caixa.setEnabled(not is_open)
+        self.btn_fechar_caixa.setEnabled(is_open)
+
+    def abrir_caixa(self):
+        """Abre sessão de caixa com valor inicial."""
+        dialog = CaixaAberturaDialog(self)
+        if dialog.exec() == QDialog.Accepted:
+            valor, obs = dialog.get_data()
+            sucesso, msg = CaixaSessaoService.abrir_caixa(valor, obs)
+            if sucesso:
+                self.atualizar_dados()
+            else:
+                QMessageBox.warning(self, "Aviso", msg)
+
+    def fechar_caixa(self):
+        """Fecha sessão aberta com conferência de contado vs esperado."""
+        sessao = CaixaSessaoService.get_sessao_aberta()
+        if not sessao:
+            QMessageBox.warning(self, "Aviso", "Não existe caixa aberto.")
+            return
+
+        dialog = CaixaFechamentoDialog(self, sessao)
+        if dialog.exec() == QDialog.Accepted:
+            valor_contado, obs = dialog.get_data()
+            sucesso, msg = CaixaSessaoService.fechar_caixa(valor_contado, obs)
             if sucesso:
                 self.atualizar_dados()
             else:

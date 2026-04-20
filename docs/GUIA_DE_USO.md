@@ -182,20 +182,52 @@ O módulo mostra:
 - Saldo em caixa (calculado por entradas - saídas)
 - Entradas do mês, saídas do mês e balanço
 
-### 7.2 Registrar entrada extra
-1. Clique **+ Registrar Entrada Extra**.
-2. Informe valor e descrição.
+### 7.2 Abertura e Fechamento de Caixa (Sessão)
+O sistema suporta sessão de caixa (turno) para consolidar movimentações e permitir conferência.
 
-### 7.3 Registrar despesa/retirada (SAÍDA)
+**Abrir Caixa**
+1. Vá em **Fluxo de Caixa**
+2. Clique **Abrir Caixa**
+3. Informe o **Valor de abertura (troco)** e (opcional) observação
+4. Confirme
+
+Resultado esperado:
+- Cria uma sessão `CaixaSessao` com status **ABERTO**
+- Registra uma movimentação `ABERTURA_CAIXA` no fluxo
+
+**Fechar Caixa**
+1. Vá em **Fluxo de Caixa**
+2. Clique **Fechar Caixa**
+3. O sistema exibirá:
+   - troco (abertura)
+   - entradas e saídas da sessão
+   - saldo esperado
+4. Informe o **Valor contado (gaveta)** e confirme
+
+Resultado esperado:
+- Fecha a sessão e registra:
+  - saldo esperado
+  - valor contado
+  - diferença (sobra/falta)
+- Registra uma movimentação `FECHAMENTO_CAIXA` no fluxo (informativa)
+- Considera conciliação de **dinheiro em gaveta** separando meios de pagamento.
+
+### 7.3 Registrar entrada extra
+1. Clique **+ Registrar Entrada Extra**.
+2. Informe valor, **meio de pagamento** e descrição.
+
+### 7.4 Registrar despesa/retirada (SAÍDA)
 1. Clique **- Registrar Despesa / Retirada**.
 2. Selecione uma categoria (Tipos de Despesa).
-3. Informe valor e observação.
+3. Informe valor, meio e observação.
 
 Persistência e regras:
 - Saldo atual considera entradas e saídas conforme tipos: [fluxo_caixa/service.py](file:///c:/Projetos/baleia/app/modules/fluxo_caixa/service.py#L12-L29)
 - Registrar saída: [fluxo_caixa/service.py](file:///c:/Projetos/baleia/app/modules/fluxo_caixa/service.py#L31-L48)
+- `FluxoCaixa` registra também `meio_pagamento` para conciliação financeira.
+- No fechamento, o esperado de gaveta é baseado em entradas/saídas em **DINHEIRO**.
 
-### 7.4 Filtrar e imprimir relatório do período
+### 7.5 Filtrar e imprimir relatório do período
 1. Ajuste “De” e “Até”.
 2. Clique **Filtrar** (atualiza a tabela).
 3. Clique **Imprimir Relatório**.
