@@ -6,7 +6,7 @@ from PySide6.QtGui import QIcon
 from app.core.database import init_db
 from app.core.config import init_config
 from app.core.branding import get_branding_context
-from app.core.resources import app_data_path
+from app.core.resources import app_base_dir, app_data_path
 from app.ui.main_window import MainWindow
 from app.ui.styles import GLOBAL_STYLE
 
@@ -29,11 +29,18 @@ def setup_logging():
 def main():
     # 1. Configurar logs
     setup_logging()
+
+    try:
+        from dotenv import load_dotenv
+
+        load_dotenv(os.path.join(app_base_dir(), ".env"), override=False)
+    except Exception:
+        pass
     
     # 2. Inicializar banco de dados e configurações
     try:
-        init_db()
         init_config()
+        init_db()
     except Exception as e:
         print(f"Erro crítico na inicialização: {e}")
         sys.exit(1)

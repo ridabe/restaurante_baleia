@@ -1,9 +1,9 @@
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
-    QStackedWidget, QLabel, QFrame
+    QStackedWidget, QLabel, QFrame, QInputDialog, QMessageBox, QLineEdit
 )
-from PySide6.QtCore import Qt, QTimer
-from PySide6.QtGui import QIcon, QPixmap
+from PySide6.QtCore import Qt, QTimer, QEvent
+from PySide6.QtGui import QIcon, QPixmap, QShortcut, QKeySequence
 from app.modules.caixa.ui import CaixaWidget
 from app.modules.estoque.ui import EstoqueWidget
 from app.modules.fiado.ui import FiadoWidget
@@ -13,6 +13,8 @@ from app.modules.dashboard.ui import DashboardWidget
 from app.ui.settings_ui import SettingsWidget
 from app.services.bible_service import BibleService
 from app.core.branding import get_branding_context
+from app.core.config import load_settings
+from app.core.database import refresh_db_session
 
 class MainWindow(QMainWindow):
     """Janela Principal do Bar do Baleia."""
@@ -24,6 +26,8 @@ class MainWindow(QMainWindow):
         self.setMinimumSize(1200, 800)
         
         self.bible_service = BibleService()
+        self._auth_unlocked_pages = set()
+        self._refreshing = False
         self.init_ui()
         
         # Timer para atualizar o versículo bíblico a cada 1 hora (3600000 ms)
@@ -31,6 +35,13 @@ class MainWindow(QMainWindow):
         self.bible_timer.timeout.connect(self.update_bible_verse)
         self.bible_timer.start(3600000)
         self.update_bible_verse()
+
+        self.auto_refresh_timer = QTimer(self)
+        self.auto_refresh_timer.timeout.connect(self._auto_refresh_tick)
+        self.auto_refresh_timer.start(30000)
+
+        self.shortcut_refresh = QShortcut(QKeySequence("F5"), self)
+        self.shortcut_refresh.activated.connect(lambda: self.refresh_current_page(silent=False))
 
     def init_ui(self):
         # Layout principal horizontal
@@ -111,6 +122,11 @@ class MainWindow(QMainWindow):
         self.btn_settings.setCheckable(True)
         self.btn_settings.clicked.connect(lambda: self.switch_page(6))
 
+        self.btn_refresh = QPushButton("  🔄  Atualizar")
+        self.btn_refresh.setObjectName("sidebarButton")
+        self.btn_refresh.setCheckable(False)
+        self.btn_refresh.clicked.connect(lambda: self.refresh_current_page(silent=False))
+
         sidebar_layout.addWidget(self.btn_dashboard)
         sidebar_layout.addWidget(self.btn_caixa)
         sidebar_layout.addWidget(self.btn_estoque)
@@ -118,6 +134,7 @@ class MainWindow(QMainWindow):
         sidebar_layout.addWidget(self.btn_fluxo)
         sidebar_layout.addWidget(self.btn_categorias)
         sidebar_layout.addWidget(self.btn_settings)
+        sidebar_layout.addWidget(self.btn_refresh)
         
         sidebar_layout.addStretch()
 
@@ -163,6 +180,51 @@ class MainWindow(QMainWindow):
         # Inicia na tela de dashboard
         self.switch_page(0)
 
+    def changeEvent(self, event):
+        """Dispara atualização ao retornar foco para a janela (multiusuário)."""
+        super().changeEvent(event)
+        if event.type() == QEvent.ActivationChange and self.isActiveWindow():
+            self.refresh_current_page(silent=True)
+
+    def _auto_refresh_tick(self):
+        """Atualiza automaticamente o dashboard enquanto a janela estiver ativa."""
+        if not self.isActiveWindow() or self.isMinimized():
+            return
+        if self.pages.currentIndex() == 0:
+            self.refresh_current_page(silent=True)
+
+    def _refresh_widget(self, widget):
+        if hasattr(widget, 'atualizar_tabela'):
+            widget.atualizar_tabela()
+        if hasattr(widget, 'atualizar_dados'):
+            widget.atualizar_dados()
+        if hasattr(widget, 'atualizar_combo_produtos'):
+            widget.atualizar_combo_produtos()
+        if hasattr(widget, 'atualizar_busca_produtos'):
+            widget.atualizar_busca_produtos()
+        if hasattr(widget, 'atualizar_combo_clientes'):
+            widget.atualizar_combo_clientes()
+
+    def refresh_current_page(self, silent: bool = True):
+        """Força recarregar dados do módulo atual, limpando cache da sessão SQLAlchemy."""
+        if self._refreshing:
+            return
+        idx = self.pages.currentIndex()
+        if idx in {3, 4} and idx not in self._auth_unlocked_pages:
+            return
+
+        try:
+            self._refreshing = True
+            refresh_db_session(hard=not silent)
+            widget = self.pages.currentWidget()
+            self._refresh_widget(widget)
+        finally:
+            self._refreshing = False
+
+        if silent:
+            return
+        QMessageBox.information(self, "Atualização", "Dados atualizados.")
+
     def on_dashboard_navigate(self, target: str, period_days: int):
         """Atalhos do dashboard para abrir módulos com contexto (período sugerido)."""
         mapping = {
@@ -183,28 +245,53 @@ class MainWindow(QMainWindow):
 
     def switch_page(self, index):
         """Alterna entre as páginas do StackedWidget e atualiza os botões."""
+        previous_index = self.pages.currentIndex()
+        if not self._authorize_protected_page(index):
+            self._sync_sidebar_buttons(previous_index)
+            return
+
         self.pages.setCurrentIndex(index)
-        
-        # Desmarca todos os botões e marca o atual
+        self._sync_sidebar_buttons(index)
+            
+        # Atualiza dados do widget que se tornou visível
+        widget = self.pages.currentWidget()
+        refresh_db_session(hard=False)
+        self._refresh_widget(widget)
+
+    def _sync_sidebar_buttons(self, index):
+        """Sincroniza estado visual dos botões da sidebar com a página ativa."""
         buttons = [
             self.btn_dashboard, self.btn_caixa, self.btn_estoque,
             self.btn_fiado, self.btn_fluxo, self.btn_categorias, self.btn_settings
         ]
         for i, btn in enumerate(buttons):
             btn.setChecked(i == index)
-            
-        # Atualiza dados do widget que se tornou visível
-        widget = self.pages.currentWidget()
-        if hasattr(widget, 'atualizar_tabela'):
-            widget.atualizar_tabela()
-        if hasattr(widget, 'atualizar_dados'):
-            widget.atualizar_dados()
-        if hasattr(widget, 'atualizar_combo_produtos'):
-            widget.atualizar_combo_produtos()
-        if hasattr(widget, 'atualizar_busca_produtos'):
-            widget.atualizar_busca_produtos()
-        if hasattr(widget, 'atualizar_combo_clientes'):
-            widget.atualizar_combo_clientes()
+
+    def _authorize_protected_page(self, index: int) -> bool:
+        """Valida senha para acesso aos módulos protegidos (Fiado e Fluxo de Caixa)."""
+        protected = {3, 4}
+        if index not in protected:
+            return True
+        if index in self._auth_unlocked_pages:
+            return True
+
+        settings = load_settings()
+        required_password = settings.get("modulo_senha", "baleia@2026")
+
+        pwd, ok = QInputDialog.getText(
+            self,
+            "Acesso Protegido",
+            "Informe a senha para acessar este módulo:",
+            QLineEdit.Password,
+        )
+        if not ok:
+            return False
+        if pwd == required_password:
+            self._auth_unlocked_pages.add(index)
+            return True
+
+        QMessageBox.warning(self, "Acesso negado", "Senha incorreta.")
+        return False
 
     def update_bible_verse(self):
         """Busca e exibe um novo versículo bíblico."""

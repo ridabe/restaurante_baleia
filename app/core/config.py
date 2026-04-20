@@ -41,6 +41,8 @@ DEFAULT_SETTINGS = {
     "empresa_cep": "08700-000",
     
     # Preferências do Sistema
+    "database_url": "",
+    "modulo_senha": "baleia@2026",
     "relatorios_path": "relatorios",
     "tema": "moderno",
     "estoque_minimo_padrao": 5,

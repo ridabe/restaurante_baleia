@@ -10,6 +10,7 @@ from datetime import datetime
 from app.core.config import load_settings
 from app.core.branding import build_report_header_html
 from app.modules.fiado.service import FiadoService
+from app.core.database import refresh_db_session
 
 class ClienteDialog(QDialog):
     """Diálogo para cadastrar um novo cliente."""
@@ -550,8 +551,9 @@ class FiadoWidget(QWidget):
             data = dialog.get_data()
             sucesso, msg = self.service.pagar_divida(cliente.id, **data)
             if sucesso:
+                refresh_db_session(hard=True)
                 self.atualizar_tabela()
-                QMessageBox.information(self, "Sucesso", f"Dívida de {cliente.nome} liquidada com sucesso!")
+                QMessageBox.information(self, "Sucesso", msg)
             else:
                 QMessageBox.critical(self, "Erro", msg)
 
@@ -583,6 +585,7 @@ class FiadoWidget(QWidget):
             data = dialog.get_data()
             sucesso, msg = self.service.pagar_divida(id_cliente, **data)
             if sucesso:
+                refresh_db_session(hard=True)
                 self.atualizar_tabela()
                 QMessageBox.information(self, "Sucesso", msg)
             else:

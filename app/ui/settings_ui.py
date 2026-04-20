@@ -4,6 +4,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt
 from app.core.config import load_settings, save_settings
+from app.core.database import get_database_status
 
 class SettingsWidget(QWidget):
     """Interface de configurações do sistema com dados institucionais completos."""
@@ -139,16 +140,49 @@ class SettingsWidget(QWidget):
         self.ticket_rodape_input = QLineEdit()
         self.relatorio_obs_input = QLineEdit()
         self.brnews_base_url_input = QLineEdit()
+        self.modulo_senha_input = QLineEdit()
+        self.modulo_senha_input.setEchoMode(QLineEdit.Password)
         
         form_docs.addRow("Pasta de Relatórios:", self.relatorios_input)
         form_docs.addRow("Estoque Mínimo Global:", self.estoque_min_input)
         form_docs.addRow("Logo da Empresa:", self.logo_path_input)
         form_docs.addRow("BRNews URL:", self.brnews_base_url_input)
+        form_docs.addRow("Senha Módulos (Fiado/Fluxo):", self.modulo_senha_input)
         form_docs.addRow("Rodapé do Ticket:", self.ticket_rodape_input)
         form_docs.addRow("Observação Relatórios:", self.relatorio_obs_input)
         
         layout_docs.addLayout(form_docs)
         self.scroll_layout.addWidget(card_docs)
+
+        # --- SEÇÃO 4: STATUS DO BANCO ---
+        card_db = QFrame()
+        card_db.setObjectName("cardFrame")
+        layout_db = QVBoxLayout(card_db)
+
+        title_db = QLabel("Status da Conexão / Banco Atual")
+        title_db.setStyleSheet("font-size: 16px; font-weight: bold; color: #0F172A; margin-bottom: 10px;")
+        layout_db.addWidget(title_db)
+
+        self.lbl_db_url = QLabel("URL: ---")
+        self.lbl_db_url.setWordWrap(True)
+        self.lbl_db_url.setStyleSheet("font-size: 12px; color: #334155;")
+        layout_db.addWidget(self.lbl_db_url)
+
+        self.lbl_db_dialect = QLabel("Dialeto: ---")
+        self.lbl_db_dialect.setStyleSheet("font-size: 12px; color: #334155;")
+        layout_db.addWidget(self.lbl_db_dialect)
+
+        self.lbl_db_status = QLabel("Status: ---")
+        self.lbl_db_status.setStyleSheet("font-size: 12px; color: #334155; font-weight: 600;")
+        layout_db.addWidget(self.lbl_db_status)
+
+        btn_db = QPushButton("Testar Conexão")
+        btn_db.setObjectName("actionButton")
+        btn_db.setMinimumHeight(40)
+        btn_db.clicked.connect(self.refresh_db_status)
+        layout_db.addWidget(btn_db, alignment=Qt.AlignLeft)
+
+        self.scroll_layout.addWidget(card_db)
 
         scroll.setWidget(scroll_content)
         main_layout.addWidget(scroll)
@@ -201,8 +235,10 @@ class SettingsWidget(QWidget):
         self.estoque_min_input.setValue(s.get("estoque_minimo_padrao", 5))
         self.logo_path_input.setText(s.get("empresa_logo_path", "app/img/logo_baleia.png"))
         self.brnews_base_url_input.setText(s.get("brnews_base_url", "http://127.0.0.1:5000"))
+        self.modulo_senha_input.setText(s.get("modulo_senha", "baleia@2026"))
         self.ticket_rodape_input.setText(s.get("ticket_rodape", ""))
         self.relatorio_obs_input.setText(s.get("relatorio_observacao", ""))
+        self.refresh_db_status()
 
     def salvar_dados(self):
         if not self.fantasia_input.text().strip():
@@ -231,6 +267,7 @@ class SettingsWidget(QWidget):
             "estoque_minimo_padrao": self.estoque_min_input.value(),
             "empresa_logo_path": self.logo_path_input.text(),
             "brnews_base_url": self.brnews_base_url_input.text(),
+            "modulo_senha": self.modulo_senha_input.text() or "baleia@2026",
             "ticket_rodape": self.ticket_rodape_input.text(),
             "relatorio_observacao": self.relatorio_obs_input.text()
         })
@@ -240,3 +277,16 @@ class SettingsWidget(QWidget):
             QMessageBox.information(self, "Sucesso", "Configurações institucionais salvas com sucesso!")
         except Exception as e:
             QMessageBox.critical(self, "Erro", f"Erro ao salvar: {e}")
+
+    def refresh_db_status(self):
+        """Atualiza informações de conexão do banco atual."""
+        info = get_database_status()
+        self.lbl_db_url.setText(f"URL: {info.get('url', '---')}")
+        self.lbl_db_dialect.setText(f"Dialeto: {info.get('dialect', '---')}")
+
+        if info.get("connected"):
+            self.lbl_db_status.setText(f"Status: Conectado ({info.get('message', 'OK')})")
+            self.lbl_db_status.setStyleSheet("font-size: 12px; color: #15803D; font-weight: 700;")
+        else:
+            self.lbl_db_status.setText(f"Status: Falha ({info.get('message', 'erro')})")
+            self.lbl_db_status.setStyleSheet("font-size: 12px; color: #DC2626; font-weight: 700;")
