@@ -13,3 +13,7 @@ build/
 
 # Environment
 .env
+
+# Android signing
+android/key.properties
+android/*.jks

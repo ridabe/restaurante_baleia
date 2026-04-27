@@ -1,4 +1,4 @@
-package com.example.bar_do_baleia_mobile
+package com.algoritmum.gfc
 
 import io.flutter.embedding.android.FlutterActivity
 
