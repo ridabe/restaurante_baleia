@@ -74,12 +74,12 @@ class ProdutoDialog(QDialog):
         
         self.btn_cancelar = QPushButton("Cancelar")
         self.btn_cancelar.setObjectName("secondaryButton")
-        self.btn_cancelar.setFixedWidth(120)
+        self.btn_cancelar.setMinimumWidth(120)
         self.btn_cancelar.clicked.connect(self.reject)
         
         self.btn_salvar = QPushButton("Salvar Produto")
         self.btn_salvar.setObjectName("primaryButton")
-        self.btn_salvar.setFixedWidth(150)
+        self.btn_salvar.setMinimumWidth(150)
         self.btn_salvar.clicked.connect(self.accept)
         
         buttons_layout.addWidget(self.btn_cancelar)
@@ -123,7 +123,7 @@ class ReposicaoEstoqueDialog(QDialog):
             f"Qtd. mínima: <b>{self.produto.estoque_minimo}</b>"
         )
         info.setWordWrap(True)
-        info.setStyleSheet("color: #475569; font-size: 12px;")
+        info.setObjectName("textSecondaryLabel")
         layout.addWidget(info)
 
         form_container = QFrame()
@@ -133,7 +133,6 @@ class ReposicaoEstoqueDialog(QDialog):
 
         self.qtd_nova = QSpinBox()
         self.qtd_nova.setRange(0, 1000000)
-        self.qtd_nova.setMinimumHeight(40)
         self.qtd_nova.setValue(max(self.produto.quantidade, self.produto.estoque_minimo))
         form_layout.addRow("Nova quantidade:", self.qtd_nova)
 
@@ -144,12 +143,12 @@ class ReposicaoEstoqueDialog(QDialog):
 
         btn_cancelar = QPushButton("Cancelar")
         btn_cancelar.setObjectName("secondaryButton")
-        btn_cancelar.setFixedWidth(120)
+        btn_cancelar.setMinimumWidth(120)
         btn_cancelar.clicked.connect(self.reject)
 
         btn_confirmar = QPushButton("Atualizar")
         btn_confirmar.setObjectName("primaryButton")
-        btn_confirmar.setFixedWidth(140)
+        btn_confirmar.setMinimumWidth(140)
         btn_confirmar.clicked.connect(self.accept)
 
         buttons_layout.addWidget(btn_cancelar)
@@ -185,16 +184,13 @@ class EstoqueWidget(QWidget):
         title_layout.addWidget(header_label)
         
         self.lbl_stats = QLabel("Carregando estatísticas...")
-        self.lbl_stats.setStyleSheet("color: #64748B; font-size: 12px;")
+        self.lbl_stats.setObjectName("mutedLabel")
         title_layout.addWidget(self.lbl_stats)
 
         self.lbl_low_stock_banner = QLabel()
         self.lbl_low_stock_banner.setWordWrap(True)
         self.lbl_low_stock_banner.setVisible(False)
-        self.lbl_low_stock_banner.setStyleSheet(
-            "background-color: #FEF3C7; border-left: 4px solid #F59E0B; "
-            "padding: 8px 10px; border-radius: 6px; color: #92400E; font-size: 12px;"
-        )
+        self.lbl_low_stock_banner.setObjectName("lowStockBanner")
         title_layout.addWidget(self.lbl_low_stock_banner)
         
         header_layout.addLayout(title_layout)
@@ -203,19 +199,17 @@ class EstoqueWidget(QWidget):
         # Busca
         self.busca_input = QLineEdit()
         self.busca_input.setPlaceholderText("🔍 Buscar produto por nome...")
-        self.busca_input.setFixedWidth(300)
+        self.busca_input.setMinimumWidth(300)
         self.busca_input.textChanged.connect(self.filtrar_tabela)
         header_layout.addWidget(self.busca_input)
 
         self.btn_adicionar = QPushButton("  + Adicionar Produto")
         self.btn_adicionar.setObjectName("primaryButton")
-        self.btn_adicionar.setMinimumHeight(40)
         self.btn_adicionar.clicked.connect(self.adicionar_produto)
         header_layout.addWidget(self.btn_adicionar)
 
         self.btn_imprimir = QPushButton("Imprimir Relatório")
         self.btn_imprimir.setObjectName("secondaryButton")
-        self.btn_imprimir.setMinimumHeight(40)
         self.btn_imprimir.clicked.connect(self.imprimir_relatorio_estoque)
         header_layout.addWidget(self.btn_imprimir)
 
@@ -331,17 +325,12 @@ class EstoqueWidget(QWidget):
 
                 btn_repor = QPushButton("Atualizar")
                 btn_repor.setObjectName("actionButton")
-                btn_repor.setMinimumHeight(40)
                 btn_repor.setMinimumWidth(140)
                 btn_repor.setCursor(Qt.PointingHandCursor)
-                btn_repor.setStyleSheet(
-                    "background-color: #3B82F6; color: #FFFFFF; border: 1px solid #2563EB; "
-                    "border-radius: 6px; padding: 8px 16px; font-weight: 600; font-size: 13px;"
-                )
                 btn_repor.clicked.connect(lambda checked=False, produto_id=p.id: self.abrir_dialogo_reposicao(produto_id))
 
                 action_container = QFrame()
-                action_container.setStyleSheet("background-color: transparent; border: none;")
+                action_container.setObjectName("actionContainer")
                 action_layout = QHBoxLayout(action_container)
                 action_layout.setContentsMargins(0, 0, 0, 0)
                 action_layout.setAlignment(Qt.AlignCenter)

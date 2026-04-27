@@ -39,10 +39,8 @@ class MovimentacaoDialog(QDialog):
         self.valor_input = QDoubleSpinBox()
         self.valor_input.setRange(0.01, 99999.99)
         self.valor_input.setPrefix("R$ ")
-        self.valor_input.setMinimumHeight(40)
 
         self.meio_combo = QComboBox()
-        self.meio_combo.setMinimumHeight(40)
         self.meio_combo.addItem("Dinheiro", "DINHEIRO")
         self.meio_combo.addItem("Pix", "PIX")
         self.meio_combo.addItem("Cartão", "CARTAO")
@@ -52,7 +50,6 @@ class MovimentacaoDialog(QDialog):
         
         if self.tipo == "SAIDA":
             self.categoria_combo = QComboBox()
-            self.categoria_combo.setMinimumHeight(40)
             
             # Carregar categorias dinâmicas do banco de dados
             categorias = self.tipo_service.get_ativos()
@@ -67,7 +64,6 @@ class MovimentacaoDialog(QDialog):
         
         self.descricao_input = QLineEdit()
         self.descricao_input.setPlaceholderText("Ex: Ref. Nota Fiscal #123")
-        self.descricao_input.setMinimumHeight(40)
 
         form_layout.addRow("Valor:", self.valor_input)
         form_layout.addRow("Meio:", self.meio_combo)
@@ -138,12 +134,10 @@ class CaixaAberturaDialog(QDialog):
         self.valor_input.setRange(0.0, 999999.99)
         self.valor_input.setPrefix("R$ ")
         self.valor_input.setDecimals(2)
-        self.valor_input.setMinimumHeight(40)
         form.addRow("Valor de abertura (troco):", self.valor_input)
 
         self.obs_input = QLineEdit()
         self.obs_input.setPlaceholderText("Opcional (ex.: Troco inicial conferido)")
-        self.obs_input.setMinimumHeight(40)
         form.addRow("Observação:", self.obs_input)
 
         layout.addLayout(form)
@@ -202,7 +196,7 @@ class CaixaFechamentoDialog(QDialog):
             f"Saldo esperado no caixa: <b>R$ {esperado:.2f}</b>"
         )
         resumo.setWordWrap(True)
-        resumo.setStyleSheet("font-size: 12px; color: #475569;")
+        resumo.setObjectName("textSecondaryLabel")
         layout.addWidget(resumo)
 
         form = QFormLayout()
@@ -212,13 +206,11 @@ class CaixaFechamentoDialog(QDialog):
         self.valor_contado.setRange(0.0, 999999.99)
         self.valor_contado.setPrefix("R$ ")
         self.valor_contado.setDecimals(2)
-        self.valor_contado.setMinimumHeight(40)
         self.valor_contado.setValue(esperado)
         form.addRow("Valor contado (gaveta):", self.valor_contado)
 
         self.obs_input = QLineEdit()
         self.obs_input.setPlaceholderText("Opcional (ex.: Diferença por sangria/erro)")
-        self.obs_input.setMinimumHeight(40)
         form.addRow("Observação:", self.obs_input)
 
         layout.addLayout(form)
@@ -260,31 +252,34 @@ class FluxoCaixaWidget(QWidget):
         
         # Card Saldo Atual
         saldo_card = QFrame()
-        saldo_card.setStyleSheet("background-color: white; border-radius: 10px; border-left: 5px solid #22C55E;")
+        saldo_card.setObjectName("metricCardPositive")
         saldo_layout = QVBoxLayout(saldo_card)
         saldo_layout.addWidget(QLabel("Saldo em Caixa"))
         self.lbl_saldo = QLabel("R$ 0.00")
-        self.lbl_saldo.setStyleSheet("font-size: 28px; font-weight: bold; color: #16A34A;")
+        self.lbl_saldo.setObjectName("metricValuePositive")
+        self.lbl_saldo.setProperty("metric_size", "lg")
         saldo_layout.addWidget(self.lbl_saldo)
         cards_layout.addWidget(saldo_card)
 
         # Card Entradas Mês
         entradas_card = QFrame()
-        entradas_card.setStyleSheet("background-color: white; border-radius: 10px; border-left: 5px solid #3B82F6;")
+        entradas_card.setObjectName("metricCardAction")
         entradas_layout = QVBoxLayout(entradas_card)
         entradas_layout.addWidget(QLabel("Entradas (Mês)"))
         self.lbl_entradas_mes = QLabel("R$ 0.00")
-        self.lbl_entradas_mes.setStyleSheet("font-size: 24px; font-weight: bold; color: #2563EB;")
+        self.lbl_entradas_mes.setObjectName("metricValueAction")
+        self.lbl_entradas_mes.setProperty("metric_size", "md")
         entradas_layout.addWidget(self.lbl_entradas_mes)
         cards_layout.addWidget(entradas_card)
 
         # Card Saídas Mês
         saidas_card = QFrame()
-        saidas_card.setStyleSheet("background-color: white; border-radius: 10px; border-left: 5px solid #EF4444;")
+        saidas_card.setObjectName("metricCardDanger")
         saidas_layout = QVBoxLayout(saidas_card)
         saidas_layout.addWidget(QLabel("Saídas (Mês)"))
         self.lbl_saidas_mes = QLabel("R$ 0.00")
-        self.lbl_saidas_mes.setStyleSheet("font-size: 24px; font-weight: bold; color: #DC2626;")
+        self.lbl_saidas_mes.setObjectName("metricValueDanger")
+        self.lbl_saidas_mes.setProperty("metric_size", "md")
         saidas_layout.addWidget(self.lbl_saidas_mes)
         cards_layout.addWidget(saidas_card)
 
@@ -295,22 +290,18 @@ class FluxoCaixaWidget(QWidget):
 
         self.btn_abrir_caixa = QPushButton("Abrir Caixa")
         self.btn_abrir_caixa.setObjectName("primaryButton")
-        self.btn_abrir_caixa.setMinimumHeight(45)
         self.btn_abrir_caixa.clicked.connect(self.abrir_caixa)
 
         self.btn_fechar_caixa = QPushButton("Fechar Caixa")
         self.btn_fechar_caixa.setObjectName("secondaryButton")
-        self.btn_fechar_caixa.setMinimumHeight(45)
         self.btn_fechar_caixa.clicked.connect(self.fechar_caixa)
         
         self.btn_saida = QPushButton("  - Registrar Despesa / Retirada")
         self.btn_saida.setObjectName("dangerButton")
-        self.btn_saida.setMinimumHeight(45)
         self.btn_saida.clicked.connect(lambda: self.abrir_dialogo_movimentacao("SAIDA"))
         
         self.btn_entrada = QPushButton("  + Registrar Entrada Extra")
         self.btn_entrada.setObjectName("actionButton")
-        self.btn_entrada.setMinimumHeight(45)
         self.btn_entrada.clicked.connect(lambda: self.abrir_dialogo_movimentacao("ENTRADA"))
         
         acoes_layout.addWidget(self.btn_abrir_caixa)
@@ -321,7 +312,7 @@ class FluxoCaixaWidget(QWidget):
         acoes_layout.addStretch()
         
         self.lbl_balanco_mes = QLabel("Balanço Mensal: R$ 0.00")
-        self.lbl_balanco_mes.setStyleSheet("font-weight: bold; color: #475569; font-size: 16px;")
+        self.lbl_balanco_mes.setObjectName("textSecondaryLabel")
         acoes_layout.addWidget(self.lbl_balanco_mes)
         
         layout.addLayout(acoes_layout)
@@ -345,30 +336,25 @@ class FluxoCaixaWidget(QWidget):
         self.date_de = QDateEdit()
         self.date_de.setCalendarPopup(True)
         self.date_de.setDate(QDate.currentDate().addDays(-7)) # Padrão última semana
-        self.date_de.setMinimumHeight(35)
         tabela_header.addWidget(self.date_de)
         
         tabela_header.addWidget(QLabel("Até:"))
         self.date_ate = QDateEdit()
         self.date_ate.setCalendarPopup(True)
         self.date_ate.setDate(QDate.currentDate())
-        self.date_ate.setMinimumHeight(35)
         tabela_header.addWidget(self.date_ate)
 
         self.chk_incluir_fiado = QCheckBox("Incluir vendas fiado (rastreio)")
         self.chk_incluir_fiado.setChecked(False)
-        self.chk_incluir_fiado.setStyleSheet("color: #64748B; font-size: 12px;")
         tabela_header.addWidget(self.chk_incluir_fiado)
         
         self.btn_filtrar = QPushButton("Filtrar")
         self.btn_filtrar.setObjectName("actionButton")
-        self.btn_filtrar.setMinimumHeight(35)
         self.btn_filtrar.clicked.connect(self.atualizar_dados)
         tabela_header.addWidget(self.btn_filtrar)
         
         self.btn_imprimir = QPushButton("Imprimir Relatório")
         self.btn_imprimir.setObjectName("secondaryButton")
-        self.btn_imprimir.setMinimumHeight(35)
         self.btn_imprimir.clicked.connect(self.imprimir_historico)
         tabela_header.addWidget(self.btn_imprimir)
         

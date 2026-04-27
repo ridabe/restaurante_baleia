@@ -31,7 +31,6 @@ class TipoDespesaDialog(QDialog):
 
         self.nome_input = QLineEdit()
         self.nome_input.setPlaceholderText("Ex: Fornecedor de Bebidas")
-        self.nome_input.setMinimumHeight(40)
         
         self.desc_input = QTextEdit()
         self.desc_input.setPlaceholderText("Descrição opcional sobre este tipo de gasto...")
@@ -98,7 +97,7 @@ class TiposDespesaWidget(QWidget):
         title_layout.addWidget(header_label)
         
         self.lbl_stats = QLabel("Gerencie os tipos de gastos do seu negócio")
-        self.lbl_stats.setStyleSheet("color: #64748B; font-size: 12px;")
+        self.lbl_stats.setObjectName("mutedLabel")
         title_layout.addWidget(self.lbl_stats)
         
         header_layout.addLayout(title_layout)
@@ -107,14 +106,12 @@ class TiposDespesaWidget(QWidget):
         # Busca
         self.busca_input = QLineEdit()
         self.busca_input.setPlaceholderText("🔍 Buscar categoria...")
-        self.busca_input.setFixedWidth(250)
-        self.busca_input.setMinimumHeight(40)
+        self.busca_input.setMinimumWidth(250)
         self.busca_input.textChanged.connect(self.filtrar_tabela)
         header_layout.addWidget(self.busca_input)
 
         self.btn_novo = QPushButton("+ Novo Tipo")
         self.btn_novo.setObjectName("primaryButton")
-        self.btn_novo.setMinimumHeight(40)
         self.btn_novo.clicked.connect(self.novo_tipo)
         header_layout.addWidget(self.btn_novo)
 
@@ -161,20 +158,17 @@ class TiposDespesaWidget(QWidget):
             # Ações
             container = QFrame()
             container.setObjectName("actionContainer")
-            container.setStyleSheet("QFrame#actionContainer { background: transparent; border: none; }")
             h_layout = QHBoxLayout(container)
             h_layout.setContentsMargins(10, 5, 10, 5)
             h_layout.setSpacing(10)
             
             btn_edit = QPushButton("Editar")
             btn_edit.setObjectName("actionButton")
-            btn_edit.setMinimumHeight(30)
             btn_edit.setCursor(Qt.PointingHandCursor)
             btn_edit.clicked.connect(lambda checked=False, item=t: self.editar_tipo(item))
             
             btn_del = QPushButton("Excluir" if t.ativo == 1 else "Reativar")
             btn_del.setObjectName("dangerButton" if t.ativo == 1 else "primaryButton")
-            btn_del.setMinimumHeight(30)
             btn_del.setCursor(Qt.PointingHandCursor)
             btn_del.clicked.connect(lambda checked=False, item=t: self.remover_tipo(item))
             

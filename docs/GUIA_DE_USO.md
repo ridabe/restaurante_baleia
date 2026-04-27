@@ -24,8 +24,8 @@ Arquivos e pontos relevantes:
 ## 2. Navegação do Sistema
 
 A navegação é feita pela sidebar:
-- Início (Dashboard)
 - Caixa
+- Início (Dashboard)
 - Estoque
 - Clientes / Fiado
 - Fluxo de Caixa
@@ -259,6 +259,20 @@ Em **Configurações**, você define:
 - BRNews URL (para o dashboard)
 - Rodapé do ticket
 - Observação dos relatórios
+- Ajustes de Visual (Acessibilidade)
+
+### 9.1 Ajustes de Visual (Acessibilidade)
+A seção **Acessibilidade** permite ajustar leitura e contraste do sistema (baixa visão):
+- **Tamanho da fonte do sistema**: Pequeno / Normal / Grande / Extra Grande
+- **Tema visual**: Tema padrão / Alto contraste (claro) / Alto contraste (escuro)
+- **Modo Acessibilidade Visual**: ativa dimensionamento de componentes e reforça contraste
+
+Aplicação e persistência:
+- As mudanças são salvas em `config/settings.json` e aplicadas globalmente.
+- Chaves usadas:
+  - `ui_font_size`
+  - `ui_theme`
+  - `ui_accessibility_enabled`
 
 Arquivo de configuração:
 - `config/settings.json`

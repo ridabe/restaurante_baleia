@@ -1,13 +1,16 @@
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, 
-    QFormLayout, QMessageBox, QComboBox, QSpinBox, QFrame, QScrollArea
+    QFormLayout, QMessageBox, QComboBox, QSpinBox, QFrame, QScrollArea, QCheckBox
 )
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal
 from app.core.config import load_settings, save_settings
 from app.core.database import get_database_status
 
 class SettingsWidget(QWidget):
     """Interface de configurações do sistema com dados institucionais completos."""
+
+    settingsChanged = Signal(dict)
+
     def __init__(self):
         super().__init__()
         self.init_ui()
@@ -29,7 +32,7 @@ class SettingsWidget(QWidget):
         header_layout.addWidget(header)
         
         sub_header = QLabel("Gerencie os dados da sua empresa e preferências globais")
-        sub_header.setStyleSheet("color: #64748B; font-size: 13px;")
+        sub_header.setObjectName("mutedLabel")
         header_layout.addWidget(sub_header)
         
         main_layout.addWidget(header_container)
@@ -51,7 +54,7 @@ class SettingsWidget(QWidget):
         layout_empresa = QVBoxLayout(card_empresa)
         
         title_empresa = QLabel("Dados da Empresa")
-        title_empresa.setStyleSheet("font-size: 16px; font-weight: bold; color: #0F172A; margin-bottom: 10px;")
+        title_empresa.setObjectName("moduleTitle")
         layout_empresa.addWidget(title_empresa)
         
         form_empresa = QFormLayout()
@@ -82,7 +85,7 @@ class SettingsWidget(QWidget):
         layout_endereco = QVBoxLayout(card_endereco)
         
         title_endereco = QLabel("Localização")
-        title_endereco.setStyleSheet("font-size: 16px; font-weight: bold; color: #0F172A; margin-bottom: 10px;")
+        title_endereco.setObjectName("moduleTitle")
         layout_endereco.addWidget(title_endereco)
         
         form_endereco = QFormLayout()
@@ -127,7 +130,7 @@ class SettingsWidget(QWidget):
         layout_docs = QVBoxLayout(card_docs)
         
         title_docs = QLabel("Preferências e Documentos")
-        title_docs.setStyleSheet("font-size: 16px; font-weight: bold; color: #0F172A; margin-bottom: 10px;")
+        title_docs.setObjectName("moduleTitle")
         layout_docs.addWidget(title_docs)
         
         form_docs = QFormLayout()
@@ -154,31 +157,62 @@ class SettingsWidget(QWidget):
         layout_docs.addLayout(form_docs)
         self.scroll_layout.addWidget(card_docs)
 
+        # --- SEÇÃO 4: ACESSIBILIDADE ---
+        card_access = QFrame()
+        card_access.setObjectName("cardFrame")
+        layout_access = QVBoxLayout(card_access)
+
+        title_access = QLabel("Acessibilidade")
+        title_access.setObjectName("moduleTitle")
+        layout_access.addWidget(title_access)
+
+        info_access = QLabel("Ajuste tamanho de fonte e contraste para melhor leitura (baixa visão).")
+        info_access.setObjectName("mutedLabel")
+        info_access.setWordWrap(True)
+        layout_access.addWidget(info_access)
+
+        form_access = QFormLayout()
+        form_access.setSpacing(15)
+
+        self.combo_font_size = QComboBox()
+        self.combo_font_size.addItems(["Pequeno", "Normal", "Grande", "Extra Grande"])
+
+        self.combo_theme = QComboBox()
+        self.combo_theme.addItems(["Tema padrão", "Alto contraste (claro)", "Alto contraste (escuro)"])
+
+        self.chk_accessibility = QCheckBox("Ativar Modo Acessibilidade Visual")
+
+        form_access.addRow("Tamanho da fonte do sistema:", self.combo_font_size)
+        form_access.addRow("Tema visual:", self.combo_theme)
+        form_access.addRow("", self.chk_accessibility)
+
+        layout_access.addLayout(form_access)
+        self.scroll_layout.addWidget(card_access)
+
         # --- SEÇÃO 4: STATUS DO BANCO ---
         card_db = QFrame()
         card_db.setObjectName("cardFrame")
         layout_db = QVBoxLayout(card_db)
 
         title_db = QLabel("Status da Conexão / Banco Atual")
-        title_db.setStyleSheet("font-size: 16px; font-weight: bold; color: #0F172A; margin-bottom: 10px;")
+        title_db.setObjectName("moduleTitle")
         layout_db.addWidget(title_db)
 
         self.lbl_db_url = QLabel("URL: ---")
         self.lbl_db_url.setWordWrap(True)
-        self.lbl_db_url.setStyleSheet("font-size: 12px; color: #334155;")
+        self.lbl_db_url.setObjectName("mutedLabel")
         layout_db.addWidget(self.lbl_db_url)
 
         self.lbl_db_dialect = QLabel("Dialeto: ---")
-        self.lbl_db_dialect.setStyleSheet("font-size: 12px; color: #334155;")
+        self.lbl_db_dialect.setObjectName("mutedLabel")
         layout_db.addWidget(self.lbl_db_dialect)
 
         self.lbl_db_status = QLabel("Status: ---")
-        self.lbl_db_status.setStyleSheet("font-size: 12px; color: #334155; font-weight: 600;")
+        self.lbl_db_status.setObjectName("mutedLabel")
         layout_db.addWidget(self.lbl_db_status)
 
         btn_db = QPushButton("Testar Conexão")
         btn_db.setObjectName("actionButton")
-        btn_db.setMinimumHeight(40)
         btn_db.clicked.connect(self.refresh_db_status)
         layout_db.addWidget(btn_db, alignment=Qt.AlignLeft)
 
@@ -190,21 +224,13 @@ class SettingsWidget(QWidget):
         # Rodapé com Botão Salvar - Garantindo visibilidade e estilo do caixa
         footer_container = QFrame()
         footer_container.setObjectName("cardFrame")
-        footer_container.setStyleSheet("""
-            QFrame#cardFrame { 
-                background-color: white; 
-                border-top: 1px solid #E2E8F0; 
-                border-radius: 0px 0px 8px 8px;
-            }
-        """)
         footer_layout = QHBoxLayout(footer_container)
         footer_layout.setContentsMargins(20, 15, 20, 15)
         footer_layout.addStretch()
         
         self.btn_salvar = QPushButton("  💾  SALVAR ALTERAÇÕES")
         self.btn_salvar.setObjectName("primaryButton")
-        self.btn_salvar.setMinimumHeight(55) # Altura similar aos botões do caixa
-        self.btn_salvar.setFixedWidth(300)
+        self.btn_salvar.setMinimumWidth(300)
         self.btn_salvar.setCursor(Qt.PointingHandCursor)
         self.btn_salvar.clicked.connect(self.salvar_dados)
         
@@ -238,7 +264,45 @@ class SettingsWidget(QWidget):
         self.modulo_senha_input.setText(s.get("modulo_senha", "baleia@2026"))
         self.ticket_rodape_input.setText(s.get("ticket_rodape", ""))
         self.relatorio_obs_input.setText(s.get("relatorio_observacao", ""))
+
+        font_size = s.get("ui_font_size", "Normal") or "Normal"
+        idx_font = self.combo_font_size.findText(font_size)
+        self.combo_font_size.setCurrentIndex(idx_font if idx_font >= 0 else 1)
+
+        theme_raw = (s.get("ui_theme", "padrao") or "padrao").strip().lower()
+        if "escuro" in theme_raw:
+            self.combo_theme.setCurrentIndex(2)
+        elif "alto" in theme_raw:
+            self.combo_theme.setCurrentIndex(1)
+        else:
+            self.combo_theme.setCurrentIndex(0)
+
+        self.chk_accessibility.setChecked(bool(s.get("ui_accessibility_enabled", False)))
+
+        self.combo_font_size.currentIndexChanged.connect(self._persist_accessibility_settings)
+        self.combo_theme.currentIndexChanged.connect(self._persist_accessibility_settings)
+        self.chk_accessibility.toggled.connect(self._persist_accessibility_settings)
         self.refresh_db_status()
+
+    def _persist_accessibility_settings(self):
+        settings = load_settings()
+        theme_key = "padrao"
+        if self.combo_theme.currentIndex() == 1:
+            theme_key = "alto_contraste_claro"
+        elif self.combo_theme.currentIndex() == 2:
+            theme_key = "alto_contraste_escuro"
+        settings.update(
+            {
+                "ui_font_size": self.combo_font_size.currentText(),
+                "ui_theme": theme_key,
+                "ui_accessibility_enabled": bool(self.chk_accessibility.isChecked()),
+            }
+        )
+        try:
+            save_settings(settings)
+            self.settingsChanged.emit(settings)
+        except Exception:
+            pass
 
     def salvar_dados(self):
         if not self.fantasia_input.text().strip():
@@ -269,12 +333,16 @@ class SettingsWidget(QWidget):
             "brnews_base_url": self.brnews_base_url_input.text(),
             "modulo_senha": self.modulo_senha_input.text() or "baleia@2026",
             "ticket_rodape": self.ticket_rodape_input.text(),
-            "relatorio_observacao": self.relatorio_obs_input.text()
+            "relatorio_observacao": self.relatorio_obs_input.text(),
+            "ui_font_size": self.combo_font_size.currentText(),
+            "ui_theme": "alto_contraste_claro" if self.combo_theme.currentIndex() == 1 else ("alto_contraste_escuro" if self.combo_theme.currentIndex() == 2 else "padrao"),
+            "ui_accessibility_enabled": bool(self.chk_accessibility.isChecked()),
         })
         
         try:
             save_settings(settings)
             QMessageBox.information(self, "Sucesso", "Configurações institucionais salvas com sucesso!")
+            self.settingsChanged.emit(settings)
         except Exception as e:
             QMessageBox.critical(self, "Erro", f"Erro ao salvar: {e}")
 
@@ -286,7 +354,9 @@ class SettingsWidget(QWidget):
 
         if info.get("connected"):
             self.lbl_db_status.setText(f"Status: Conectado ({info.get('message', 'OK')})")
-            self.lbl_db_status.setStyleSheet("font-size: 12px; color: #15803D; font-weight: 700;")
+            self.lbl_db_status.setProperty("db_status", "ok")
         else:
             self.lbl_db_status.setText(f"Status: Falha ({info.get('message', 'erro')})")
-            self.lbl_db_status.setStyleSheet("font-size: 12px; color: #DC2626; font-weight: 700;")
+            self.lbl_db_status.setProperty("db_status", "error")
+        self.lbl_db_status.style().unpolish(self.lbl_db_status)
+        self.lbl_db_status.style().polish(self.lbl_db_status)

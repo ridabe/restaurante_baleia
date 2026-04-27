@@ -21,35 +21,21 @@ class MetricCard(QFrame):
         layout.setSpacing(4)
 
         self.lbl_title = QLabel(self.title)
-        self.lbl_title.setStyleSheet("font-size: 12px; color: #64748B; font-weight: 600;")
+        self.lbl_title.setObjectName("mutedLabel")
         layout.addWidget(self.lbl_title)
 
         self.lbl_value = QLabel("R$ 0,00")
-        self.lbl_value.setStyleSheet(
-            f"font-size: 28px; font-weight: 700; color: {self.accent_color};"
-        )
+        self.lbl_value.setObjectName("metricValueDashboard")
+        self.lbl_value.setStyleSheet(f"color: {self.accent_color};")
         layout.addWidget(self.lbl_value)
 
         self.lbl_subtitle = QLabel("---")
-        self.lbl_subtitle.setStyleSheet("font-size: 11px; color: #94A3B8;")
+        self.lbl_subtitle.setObjectName("mutedLabel")
         self.lbl_subtitle.setWordWrap(True)
         layout.addWidget(self.lbl_subtitle)
 
         self.setCursor(Qt.PointingHandCursor)
-        self.setStyleSheet(
-            f"""
-            QFrame#cardFrame {{
-                background-color: #FFFFFF;
-                border: 1px solid #E2E8F0;
-                border-left: 4px solid {self.accent_color};
-                border-radius: 8px;
-            }}
-            QFrame#cardFrame:hover {{
-                border: 1px solid #CBD5E1;
-                background-color: #FBFDFF;
-            }}
-            """
-        )
+        self.setStyleSheet(f"QFrame#cardFrame {{ border-left: 6px solid {self.accent_color}; }}")
 
     def set_data(self, value_text: str, subtitle_text: str = ""):
         """Atualiza os valores exibidos no KPI."""
@@ -80,7 +66,7 @@ class SectionFrame(QFrame):
         root_layout.setSpacing(10)
 
         lbl_title = QLabel(self.title)
-        lbl_title.setStyleSheet("font-size: 16px; color: #0F172A; font-weight: 700;")
+        lbl_title.setObjectName("moduleTitle")
         lbl_title.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
         root_layout.addWidget(lbl_title)
 

@@ -195,7 +195,7 @@ class DetalhesFiadoDialog(QDialog):
 
         resumo_layout = QHBoxLayout()
         lbl_total = QLabel(f"Dívida Atual: R$ {self.cliente.divida_atual:.2f}")
-        lbl_total.setStyleSheet("font-size: 18px; font-weight: bold; color: #EF4444;")
+        lbl_total.setObjectName("metricValueDanger")
         resumo_layout.addStretch()
         resumo_layout.addWidget(lbl_total)
         layout.addLayout(resumo_layout)
@@ -229,7 +229,7 @@ class FiadoWidget(QWidget):
         title_layout.addWidget(header_label)
         
         self.lbl_stats = QLabel("Carregando resumo...")
-        self.lbl_stats.setStyleSheet("color: #64748B; font-size: 12px;")
+        self.lbl_stats.setObjectName("mutedLabel")
         title_layout.addWidget(self.lbl_stats)
         
         header_layout.addLayout(title_layout)
@@ -237,13 +237,11 @@ class FiadoWidget(QWidget):
 
         self.btn_imprimir = QPushButton("Imprimir Lista")
         self.btn_imprimir.setObjectName("actionButton")
-        self.btn_imprimir.setMinimumHeight(40)
         self.btn_imprimir.clicked.connect(self.imprimir_lista)
         header_layout.addWidget(self.btn_imprimir)
 
         self.btn_cadastrar = QPushButton("+ Novo Cliente")
         self.btn_cadastrar.setObjectName("primaryButton")
-        self.btn_cadastrar.setMinimumHeight(40)
         self.btn_cadastrar.clicked.connect(self.cadastrar_cliente)
         header_layout.addWidget(self.btn_cadastrar)
 
@@ -275,12 +273,10 @@ class FiadoWidget(QWidget):
         
         self.btn_receber = QPushButton("Receber Pagamento")
         self.btn_receber.setObjectName("actionButton")
-        self.btn_receber.setMinimumHeight(40)
         self.btn_receber.clicked.connect(self.receber_pagamento)
         
         self.btn_remover = QPushButton("Excluir Cliente")
         self.btn_remover.setObjectName("dangerButton")
-        self.btn_remover.setMinimumHeight(40)
         self.btn_remover.clicked.connect(self.remover_cliente)
 
         acoes_layout.addWidget(self.btn_receber)
@@ -500,13 +496,6 @@ class FiadoWidget(QWidget):
             # Botões de Ação na Linha - Definição Limpa e Robusta
             container = QFrame()
             container.setObjectName("actionContainer")
-            # Força o container a ser transparente e sem bordas, garantindo que não oculte os filhos
-            container.setStyleSheet("""
-                QFrame#actionContainer { 
-                    background-color: transparent; 
-                    border: none; 
-                }
-            """)
             
             h_layout = QHBoxLayout(container)
             h_layout.setContentsMargins(10, 5, 10, 5)
@@ -515,14 +504,12 @@ class FiadoWidget(QWidget):
             
             btn_ver = QPushButton("Ver")
             btn_ver.setObjectName("actionButton")
-            btn_ver.setMinimumHeight(32)
             btn_ver.setMinimumWidth(90)
             btn_ver.setCursor(Qt.PointingHandCursor)
             btn_ver.clicked.connect(lambda checked=False, cliente=c: self.ver_detalhes_fiado(cliente))
             
             btn_pagar_lin = QPushButton("Pagar")
             btn_pagar_lin.setObjectName("primaryButton")
-            btn_pagar_lin.setMinimumHeight(32)
             btn_pagar_lin.setMinimumWidth(90)
             btn_pagar_lin.setCursor(Qt.PointingHandCursor)
             btn_pagar_lin.setEnabled(c.divida_atual > 0)

@@ -3,10 +3,13 @@ from PySide6.QtWidgets import (
     QTableWidget, QTableWidgetItem, QMessageBox, QHeaderView,
     QComboBox, QSpinBox, QGroupBox, QFrame, QCompleter
 )
-from PySide6.QtCore import Qt, QStringListModel
+from PySide6.QtCore import Qt, QStringListModel, QSizeF
+from PySide6.QtGui import QTextDocument, QPageSize, QFont
+from PySide6.QtPrintSupport import QPrinter, QPrintDialog
 from datetime import datetime
 from app.core.config import load_settings
 from app.core.branding import build_ticket_header_html
+from app.ui.styles import ThemeManager
 from app.modules.caixa.service import CaixaService
 from app.modules.estoque.service import EstoqueService
 from app.modules.fiado.service import FiadoService
@@ -40,7 +43,7 @@ class CaixaWidget(QWidget):
         busca_layout.setSpacing(15)
         
         lbl_instrucao = QLabel("Busque por Nome ou Código:")
-        lbl_instrucao.setStyleSheet("color: #64748B; font-size: 12px;")
+        lbl_instrucao.setObjectName("mutedLabel")
         busca_layout.addWidget(lbl_instrucao)
 
         self.produto_busca = QComboBox()
@@ -59,7 +62,7 @@ class CaixaWidget(QWidget):
         self.qtd_spin = QSpinBox()
         self.qtd_spin.setRange(1, 1000)
         self.qtd_spin.setMinimumHeight(45)
-        self.qtd_spin.setFixedWidth(100)
+        self.qtd_spin.setMinimumWidth(100)
         
         self.btn_add = QPushButton("  + ADICIONAR ITEM")
         self.btn_add.setObjectName("actionButton")
@@ -104,21 +107,18 @@ class CaixaWidget(QWidget):
         resumo_layout.setSpacing(15)
         
         self.lbl_total = QLabel("R$ 0.00")
-        self.lbl_total.setObjectName("headerTitle")
-        self.lbl_total.setStyleSheet("font-size: 42px; color: #16A34A; margin: 10px 0;")
+        self.lbl_total.setObjectName("caixaTotalValue")
         self.lbl_total.setAlignment(Qt.AlignCenter)
         resumo_layout.addWidget(self.lbl_total)
         
         resumo_layout.addWidget(QLabel("Forma de Pagamento:"))
         self.combo_pagamento = QComboBox()
-        self.combo_pagamento.setMinimumHeight(40)
         self.combo_pagamento.addItems(["Dinheiro", "Cartão", "Pix", "FIADO"])
         self.combo_pagamento.currentIndexChanged.connect(self.on_pagamento_changed)
         resumo_layout.addWidget(self.combo_pagamento)
 
         self.lbl_cliente = QLabel("Cliente (Opcional):")
         self.combo_cliente = QComboBox()
-        self.combo_cliente.setMinimumHeight(40)
         self.atualizar_combo_clientes()
         resumo_layout.addWidget(self.lbl_cliente)
         cliente_layout = QHBoxLayout()
@@ -126,7 +126,7 @@ class CaixaWidget(QWidget):
 
         self.btn_refresh_clientes = QPushButton("↻")
         self.btn_refresh_clientes.setObjectName("secondaryButton")
-        self.btn_refresh_clientes.setFixedSize(44, 40)
+        self.btn_refresh_clientes.setMinimumSize(44, 44)
         self.btn_refresh_clientes.setToolTip("Atualizar lista de clientes")
         self.btn_refresh_clientes.clicked.connect(self.atualizar_combo_clientes)
 
@@ -141,7 +141,6 @@ class CaixaWidget(QWidget):
         
         self.btn_confirmar = QPushButton("GERAR PRÉVIA")
         self.btn_confirmar.setObjectName("actionButton")
-        self.btn_confirmar.setMinimumHeight(50)
         self.btn_confirmar.clicked.connect(self.confirmar_pedido)
         
         btn_layout.addWidget(self.btn_limpar)
@@ -155,22 +154,14 @@ class CaixaWidget(QWidget):
         ticket_layout = QVBoxLayout(ticket_group)
         
         self.ticket_view = QLabel("Aguardando confirmação...")
+        self.ticket_view.setObjectName("ticketPreview")
         self.ticket_view.setAlignment(Qt.AlignTop | Qt.AlignLeft)
-        self.ticket_view.setStyleSheet("""
-            background-color: #FFFBEB; 
-            border: 1px dashed #D97706; 
-            padding: 20px; 
-            font-family: 'Courier New'; 
-            font-size: 13px;
-            color: #92400E;
-        """)
         self.ticket_view.setWordWrap(True)
         self.ticket_view.setMinimumHeight(250)
         ticket_layout.addWidget(self.ticket_view)
         
         self.btn_receber = QPushButton("FINALIZAR VENDA")
         self.btn_receber.setObjectName("primaryButton")
-        self.btn_receber.setMinimumHeight(60)
         self.btn_receber.setEnabled(False)
         self.btn_receber.clicked.connect(self.receber_pagamento)
         ticket_layout.addWidget(self.btn_receber)
@@ -289,41 +280,79 @@ class CaixaWidget(QWidget):
         self.btn_receber.setEnabled(True)
         self.gerar_preview_ticket()
 
-    def gerar_preview_ticket(self):
-        """Monta o visual do ticket em HTML com dados dinâmicos da empresa."""
+    def _build_ticket_html(self, include_preview_note: bool, *, for_print: bool) -> str:
+        """Monta o HTML do ticket (prévia ou final) com dados dinâmicos da empresa."""
         s = load_settings()
+        cfg = ThemeManager.normalize_settings(s)
+        preview_scale = cfg["scale"] * (1.15 if cfg["accessibility"] else 1.0)
+        body_px = 13 if for_print else int(round(13 * preview_scale))
+        total_px = 16 if for_print else int(round(16 * preview_scale))
+        note_px = 11 if for_print else int(round(12 * preview_scale))
         rodape = s.get("ticket_rodape", "Obrigado pela preferência!")
 
         nome_cliente = self.combo_cliente.currentText()
         total = self.lbl_total.text()
         data_hora = datetime.now().strftime("%d/%m/%Y %H:%M")
 
-        ticket = build_ticket_header_html(settings=s)
-        if self.venda_confirmada and self.btn_receber.isEnabled():
-            ticket += (
-                "<div style='background-color:#DBEAFE; color:#1E40AF; "
-                "padding:6px 8px; margin: 0 0 10px 0; border-radius:6px; font-size:11px;'>"
-                "<b>Prévia do ticket:</b> a venda ainda não foi registrada. "
-                "Clique em <b>FINALIZAR VENDA</b> para concluir."
-                "</div>"
-            )
+        if for_print:
+            ticket = f"<div style=\"font-family:'Courier New'; font-size:{body_px}px; color:#92400E;\">"
+        else:
+            ticket = f"<div style=\"font-family:'Courier New'; font-size:{body_px}px;\">"
+        ticket += build_ticket_header_html(settings=s)
+        if include_preview_note:
+            if for_print:
+                ticket += (
+                    "<div style='background-color:#DBEAFE; color:#1E40AF; "
+                    f"padding:6px 8px; margin: 0 0 10px 0; border-radius:6px; font-size:{note_px}px;'>"
+                    "<b>Prévia do ticket:</b> a venda ainda não foi registrada. "
+                    "Clique em <b>FINALIZAR VENDA</b> para concluir."
+                    "</div>"
+                )
+            else:
+                ticket += (
+                    f"<div style='padding:6px 8px; margin: 0 0 10px 0; border-radius:6px; font-size:{note_px}px;'>"
+                    "<b>Prévia do ticket:</b> a venda ainda não foi registrada. "
+                    "Clique em <b>FINALIZAR VENDA</b> para concluir."
+                    "</div>"
+                )
         ticket += f"Data: {data_hora}<br>"
         ticket += f"Cliente: {nome_cliente}<br>"
-        ticket += "-"*35 + "<br>"
-        
+        ticket += "-" * 35 + "<br>"
+
         for item in self.pedido_atual:
-            p = item['produto']
-            sub = item['qtd'] * p.preco
+            p = item["produto"]
+            sub = item["qtd"] * p.preco
             ticket += f"<b>{p.codigo} - {p.nome}</b><br>"
             ticket += f"   {item['qtd']} x R$ {p.preco:.2f} = R$ {sub:.2f}<br>"
-            
-        ticket += "-"*35 + "<br>"
-        ticket += f"<div style='text-align: right; font-size:16px;'><b>TOTAL: {total}</b></div><br>"
-        ticket += f"<div style='text-align: center; font-size: 11px; margin-top: 10px;'>"
+
+        ticket += "-" * 35 + "<br>"
+        ticket += f"<div style='text-align: right; font-size:{total_px}px;'><b>TOTAL: {total}</b></div><br>"
+        ticket += "<div style='text-align: center; font-size: 11px; margin-top: 10px;'>"
         ticket += f"<i>{rodape}</i><br>"
         ticket += "DOCUMENTO NÃO FISCAL</div>"
-        
-        self.ticket_view.setText(ticket)
+        ticket += "</div>"
+        return ticket
+
+    def gerar_preview_ticket(self):
+        """Monta o visual do ticket em HTML com dados dinâmicos da empresa."""
+        self.ticket_view.setText(self._build_ticket_html(include_preview_note=True, for_print=False))
+
+    def imprimir_ticket(self, ticket_html: str) -> bool:
+        """Abre o diálogo de impressão e imprime o ticket com o mesmo layout do HTML."""
+        printer = QPrinter(QPrinter.HighResolution)
+        printer.setPageSize(QPageSize(QSizeF(80, 297), QPageSize.Unit.Millimeter))
+        printer.setFullPage(True)
+
+        dialog = QPrintDialog(printer, self)
+        if dialog.exec() != QPrintDialog.Accepted:
+            return False
+
+        doc = QTextDocument()
+        doc.setDefaultFont(QFont("Courier New", 10))
+        doc.setPageSize(printer.pageRect(QPrinter.Point).size())
+        doc.setHtml(ticket_html)
+        doc.print_(printer)
+        return True
 
     def receber_pagamento(self):
         """Efetivamente persiste a venda no banco de dados."""
@@ -338,7 +367,7 @@ class CaixaWidget(QWidget):
                 'preco': item['produto'].preco
             })
 
-        sucesso, msg = self.caixa_service.registrar_venda(
+        sucesso, msg, venda_id = self.caixa_service.registrar_venda(
             itens_venda=itens_para_servico,
             metodo_pagamento=metodo,
             cliente_id=cliente_obj.id if cliente_obj else None,
@@ -346,7 +375,16 @@ class CaixaWidget(QWidget):
         )
 
         if sucesso:
-            QMessageBox.information(self, "Sucesso", "Venda realizada e persistida com sucesso!")
+            ticket_final_html = self._build_ticket_html(include_preview_note=False, for_print=True)
+            reply = QMessageBox.question(
+                self,
+                "Imprimir Ticket",
+                "Venda registrada. Deseja imprimir o ticket?",
+                QMessageBox.Yes | QMessageBox.No,
+            )
+            if reply == QMessageBox.Yes:
+                self.imprimir_ticket(ticket_final_html)
+            QMessageBox.information(self, "Sucesso", f"Venda registrada com sucesso!{f' (Venda #{venda_id})' if venda_id else ''}")
             self.limpar_pedido()
         else:
             QMessageBox.critical(self, "Erro", msg)

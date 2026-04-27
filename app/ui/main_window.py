@@ -4,6 +4,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, QTimer, QEvent
 from PySide6.QtGui import QIcon, QPixmap, QShortcut, QKeySequence
+from PySide6.QtWidgets import QApplication
 from app.modules.caixa.ui import CaixaWidget
 from app.modules.estoque.ui import EstoqueWidget
 from app.modules.fiado.ui import FiadoWidget
@@ -13,8 +14,9 @@ from app.modules.dashboard.ui import DashboardWidget
 from app.ui.settings_ui import SettingsWidget
 from app.services.bible_service import BibleService
 from app.core.branding import get_branding_context
-from app.core.config import load_settings
+from app.core.config import load_settings, save_settings
 from app.core.database import refresh_db_session
+from app.ui.styles import ThemeManager
 
 class MainWindow(QMainWindow):
     """Janela Principal do Bar do Baleia."""
@@ -28,7 +30,9 @@ class MainWindow(QMainWindow):
         self.bible_service = BibleService()
         self._auth_unlocked_pages = set()
         self._refreshing = False
+        self._applying_theme = False
         self.init_ui()
+        self.apply_theme(load_settings())
         
         # Timer para atualizar o versículo bíblico a cada 1 hora (3600000 ms)
         self.bible_timer = QTimer(self)
@@ -61,7 +65,7 @@ class MainWindow(QMainWindow):
 
         # Logo/Nome do Sistema (Container com Padding)
         logo_container = QFrame()
-        logo_container.setStyleSheet("background-color: #0F172A; padding: 30px 20px;")
+        logo_container.setObjectName("sidebarLogoContainer")
         logo_layout = QVBoxLayout(logo_container)
 
         logo_img_label = QLabel()
@@ -74,12 +78,12 @@ class MainWindow(QMainWindow):
         logo_layout.addWidget(logo_img_label)
 
         logo_label = QLabel(self.branding["system_name"])
-        logo_label.setStyleSheet("font-size: 22px; font-weight: bold; color: #22C55E;")
+        logo_label.setObjectName("sidebarLogoTitle")
         logo_label.setAlignment(Qt.AlignCenter)
         logo_layout.addWidget(logo_label)
 
         sub_logo = QLabel(self.branding["system_subtitle"])
-        sub_logo.setStyleSheet("font-size: 12px; color: #94A3B8; text-transform: uppercase;")
+        sub_logo.setObjectName("sidebarLogoSubtitle")
         sub_logo.setAlignment(Qt.AlignCenter)
         logo_layout.addWidget(sub_logo)
         
@@ -122,6 +126,11 @@ class MainWindow(QMainWindow):
         self.btn_settings.setCheckable(True)
         self.btn_settings.clicked.connect(lambda: self.switch_page(6))
 
+        self.btn_accessibility = QPushButton("  ☑  Modo Acessibilidade")
+        self.btn_accessibility.setObjectName("sidebarToggle")
+        self.btn_accessibility.setCheckable(True)
+        self.btn_accessibility.toggled.connect(self.toggle_accessibility_mode)
+
         self.btn_refresh = QPushButton("  🔄  Atualizar")
         self.btn_refresh.setObjectName("sidebarButton")
         self.btn_refresh.setCheckable(False)
@@ -134,18 +143,19 @@ class MainWindow(QMainWindow):
         sidebar_layout.addWidget(self.btn_fluxo)
         sidebar_layout.addWidget(self.btn_categorias)
         sidebar_layout.addWidget(self.btn_settings)
+        sidebar_layout.addWidget(self.btn_accessibility)
         sidebar_layout.addWidget(self.btn_refresh)
         
         sidebar_layout.addStretch()
 
         # Versículo Bíblico na Sidebar
         bible_container = QFrame()
-        bible_container.setStyleSheet("background-color: #1E293B; border-top: 1px solid #334155;")
+        bible_container.setObjectName("sidebarBibleContainer")
         bible_layout = QVBoxLayout(bible_container)
         
         self.lbl_versiculo = QLabel("Carregando versículo...")
+        self.lbl_versiculo.setObjectName("sidebarVerse")
         self.lbl_versiculo.setWordWrap(True)
-        self.lbl_versiculo.setStyleSheet("font-size: 11px; font-style: italic; color: #94A3B8; line-height: 1.4;")
         bible_layout.addWidget(self.lbl_versiculo)
         
         sidebar_layout.addWidget(bible_container)
@@ -166,6 +176,8 @@ class MainWindow(QMainWindow):
         self.fluxo_widget = FluxoCaixaWidget()
         self.categorias_widget = TiposDespesaWidget()
         self.settings_widget = SettingsWidget()
+        if hasattr(self.settings_widget, "settingsChanged"):
+            self.settings_widget.settingsChanged.connect(self.on_settings_changed)
 
         self.pages.addWidget(self.caixa_widget)
         self.pages.addWidget(self.dashboard_widget)
@@ -257,6 +269,7 @@ class MainWindow(QMainWindow):
         widget = self.pages.currentWidget()
         refresh_db_session(hard=False)
         self._refresh_widget(widget)
+        ThemeManager.apply_to_widget_tree(widget, load_settings())
 
     def _sync_sidebar_buttons(self, index):
         """Sincroniza estado visual dos botões da sidebar com a página ativa."""
@@ -266,6 +279,40 @@ class MainWindow(QMainWindow):
         ]
         for i, btn in enumerate(buttons):
             btn.setChecked(i == index)
+
+    def apply_theme(self, settings: dict):
+        if self._applying_theme:
+            return
+        self._applying_theme = True
+        try:
+            app = QApplication.instance()
+            if app is not None:
+                ThemeManager.apply(app, settings, root=self)
+
+            cfg = ThemeManager.normalize_settings(settings)
+            scale = cfg["scale"]
+            sidebar_w = int(round((300 if cfg["accessibility"] else 260) * max(1.0, min(scale, 1.4))))
+            sidebar = self.findChild(QFrame, "sidebarFrame")
+            if sidebar is not None:
+                sidebar.setFixedWidth(sidebar_w)
+
+            self.btn_accessibility.blockSignals(True)
+            self.btn_accessibility.setChecked(bool(settings.get("ui_accessibility_enabled", False)))
+            self.btn_accessibility.blockSignals(False)
+        finally:
+            self._applying_theme = False
+
+    def on_settings_changed(self, settings: dict):
+        self.apply_theme(settings)
+
+    def toggle_accessibility_mode(self, checked: bool):
+        settings = load_settings()
+        settings["ui_accessibility_enabled"] = bool(checked)
+        try:
+            save_settings(settings)
+        except Exception:
+            pass
+        self.apply_theme(settings)
 
     def _authorize_protected_page(self, index: int) -> bool:
         """Valida senha para acesso aos módulos protegidos (Dashboard, Fiado e Fluxo de Caixa)."""

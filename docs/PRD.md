@@ -60,8 +60,8 @@ O sistema é desenhado para operação local, com banco SQLite e configuração 
 ### 5.1 Navegação / Shell do Sistema
 - Sidebar com logo institucional, nome do sistema e subtítulo.
 - Páginas:
-  - Início (Dashboard)
   - Caixa
+  - Início (Dashboard)
   - Estoque
   - Clientes/Fiado
   - Fluxo de Caixa
@@ -174,6 +174,10 @@ Funcionalidades:
   - `ticket_rodape`
   - `relatorio_observacao`
   - `brnews_base_url` (fonte primária de notícias)
+  - Ajustes de Visual (Acessibilidade):
+    - `ui_font_size`: Pequeno / Normal / Grande / Extra Grande
+    - `ui_theme`: `padrao` / `alto_contraste_claro` / `alto_contraste_escuro`
+    - `ui_accessibility_enabled`: ativa dimensionamento/contraste global para baixa visão
 
 ## 6. Relatórios, Tickets e Documentos Não Fiscais
 
@@ -235,6 +239,7 @@ Banco de dados:
 - Relatórios e ticket imprimem com logo institucional em tamanho apropriado.
 - Estoque exibe ação “Atualizar” por item quando `quantidade <= mínimo`.
 - Dashboard carrega notícias via BRNews ou fallback RSS sem travar a interface.
+- Ajustes de Visual persistem em `config/settings.json` e aplicam tema/escala/contraste em todos os módulos.
 
 ## 11. Riscos e Mitigações
 - Falha de rede (notícias/versículo): fallback e tolerância a erro sem travar UI.
