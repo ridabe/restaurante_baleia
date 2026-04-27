@@ -114,11 +114,11 @@ class CaixaService:
 
             db_session.commit()
             logger.info(f"Venda #{nova_venda.id} registrada com sucesso. Total: R$ {total_venda:.2f}")
-            return True, f"Venda #{nova_venda.id} realizada!"
+            return True, f"Venda #{nova_venda.id} realizada!", int(nova_venda.id)
         except Exception as e:
             db_session.rollback()
             logger.error(f"Erro ao registrar venda: {e}")
-            return False, f"Erro na venda: {str(e)}"
+            return False, f"Erro na venda: {str(e)}", None
 
     @staticmethod
     def abrir_caixa(valor_inicial):

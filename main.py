@@ -8,7 +8,8 @@ from app.core.config import init_config
 from app.core.branding import get_branding_context
 from app.core.resources import app_base_dir, app_data_path
 from app.ui.main_window import MainWindow
-from app.ui.styles import GLOBAL_STYLE
+from app.ui.styles import ThemeManager
+from app.core.config import load_settings
 
 def setup_logging():
     """Configuração global de logs."""
@@ -50,14 +51,14 @@ def main():
     branding = get_branding_context()
     app.setWindowIcon(QIcon(branding["logo_path"]))
     
-    # Aplicar Estilo Global
-    app.setStyleSheet(GLOBAL_STYLE)
+    ThemeManager.apply(app, load_settings())
     
     # Aplicar estilo básico do sistema (fallback)
     app.setStyle("Fusion")
     
     window = MainWindow()
     window.show()
+    ThemeManager.apply(app, load_settings(), root=window)
     
     sys.exit(app.exec())
 

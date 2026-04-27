@@ -49,6 +49,11 @@ DEFAULT_SETTINGS = {
     "versiculo_api_url": "https://bible-api.com/random",
     "versiculo_update_interval": 3600, # 1 hora em segundos
 
+    # Acessibilidade (UI)
+    "ui_font_size": "Normal",
+    "ui_theme": "padrao",
+    "ui_accessibility_enabled": False,
+
     # Noticias (Dashboard)
     "brnews_base_url": "http://127.0.0.1:5000",
     "news_rss_fallback_url": "https://news.google.com/rss?hl=pt-BR&gl=BR&ceid=BR:pt-419",

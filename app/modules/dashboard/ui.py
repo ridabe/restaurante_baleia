@@ -86,7 +86,7 @@ class DashboardWidget(QWidget):
         layout.setSpacing(12)
 
         title = QLabel("Dashboard Gerencial")
-        title.setStyleSheet("font-size: 22px; font-weight: 700; color: #0F172A;")
+        title.setObjectName("headerTitle")
         layout.addWidget(title)
 
         layout.addStretch()
@@ -103,18 +103,16 @@ class DashboardWidget(QWidget):
 
         self.btn_refresh = QPushButton("Atualizar")
         self.btn_refresh.setObjectName("actionButton")
-        self.btn_refresh.setMinimumHeight(36)
         self.btn_refresh.clicked.connect(self.atualizar_dados)
         layout.addWidget(self.btn_refresh)
 
         self.btn_export = QPushButton("Exportar PDF")
         self.btn_export.setObjectName("secondaryButton")
-        self.btn_export.setMinimumHeight(36)
         self.btn_export.clicked.connect(self.exportar_pdf)
         layout.addWidget(self.btn_export)
 
         self.lbl_updated = QLabel("Atualização: --:--")
-        self.lbl_updated.setStyleSheet("font-size: 12px; color: #64748B;")
+        self.lbl_updated.setObjectName("mutedLabel")
         layout.addWidget(self.lbl_updated)
 
         self.main_layout.addWidget(header)
@@ -212,7 +210,7 @@ class DashboardWidget(QWidget):
 
         self.section_fiado = SectionFrame("Gestão de Fiado")
         self.lbl_fiado_resumo = QLabel("Total a receber: R$ 0,00 | Devedores: 0")
-        self.lbl_fiado_resumo.setStyleSheet("font-size: 13px; color: #475569; font-weight: 600;")
+        self.lbl_fiado_resumo.setObjectName("textSecondaryLabel")
         self.section_fiado.content_layout.addWidget(self.lbl_fiado_resumo)
         self.table_fiado = QTableWidget()
         self._setup_table(
