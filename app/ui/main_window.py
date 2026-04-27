@@ -87,15 +87,15 @@ class MainWindow(QMainWindow):
         sidebar_layout.addSpacing(10)
 
         # Botões de Navegação
-        self.btn_dashboard = QPushButton("  🏠  Início")
-        self.btn_dashboard.setObjectName("sidebarButton")
-        self.btn_dashboard.setCheckable(True)
-        self.btn_dashboard.clicked.connect(lambda: self.switch_page(0))
-
         self.btn_caixa = QPushButton("  💰  Caixa")
         self.btn_caixa.setObjectName("sidebarButton")
         self.btn_caixa.setCheckable(True)
-        self.btn_caixa.clicked.connect(lambda: self.switch_page(1))
+        self.btn_caixa.clicked.connect(lambda: self.switch_page(0))
+
+        self.btn_dashboard = QPushButton("  🏠  Início")
+        self.btn_dashboard.setObjectName("sidebarButton")
+        self.btn_dashboard.setCheckable(True)
+        self.btn_dashboard.clicked.connect(lambda: self.switch_page(1))
         
         self.btn_estoque = QPushButton("  📦  Estoque")
         self.btn_estoque.setObjectName("sidebarButton")
@@ -127,8 +127,8 @@ class MainWindow(QMainWindow):
         self.btn_refresh.setCheckable(False)
         self.btn_refresh.clicked.connect(lambda: self.refresh_current_page(silent=False))
 
-        sidebar_layout.addWidget(self.btn_dashboard)
         sidebar_layout.addWidget(self.btn_caixa)
+        sidebar_layout.addWidget(self.btn_dashboard)
         sidebar_layout.addWidget(self.btn_estoque)
         sidebar_layout.addWidget(self.btn_fiado)
         sidebar_layout.addWidget(self.btn_fluxo)
@@ -167,8 +167,8 @@ class MainWindow(QMainWindow):
         self.categorias_widget = TiposDespesaWidget()
         self.settings_widget = SettingsWidget()
 
-        self.pages.addWidget(self.dashboard_widget)
         self.pages.addWidget(self.caixa_widget)
+        self.pages.addWidget(self.dashboard_widget)
         self.pages.addWidget(self.estoque_widget)
         self.pages.addWidget(self.fiado_widget)
         self.pages.addWidget(self.fluxo_widget)
@@ -177,7 +177,7 @@ class MainWindow(QMainWindow):
 
         main_layout.addWidget(self.pages)
 
-        # Inicia na tela de dashboard
+        # Inicia na tela de caixa
         self.switch_page(0)
 
     def changeEvent(self, event):
@@ -190,7 +190,7 @@ class MainWindow(QMainWindow):
         """Atualiza automaticamente o dashboard enquanto a janela estiver ativa."""
         if not self.isActiveWindow() or self.isMinimized():
             return
-        if self.pages.currentIndex() == 0:
+        if self.pages.currentIndex() == 1:
             self.refresh_current_page(silent=True)
 
     def _refresh_widget(self, widget):
@@ -210,7 +210,7 @@ class MainWindow(QMainWindow):
         if self._refreshing:
             return
         idx = self.pages.currentIndex()
-        if idx in {3, 4} and idx not in self._auth_unlocked_pages:
+        if idx in {1, 3, 4} and idx not in self._auth_unlocked_pages:
             return
 
         try:
@@ -228,7 +228,7 @@ class MainWindow(QMainWindow):
     def on_dashboard_navigate(self, target: str, period_days: int):
         """Atalhos do dashboard para abrir módulos com contexto (período sugerido)."""
         mapping = {
-            "caixa": 1,
+            "caixa": 0,
             "estoque": 2,
             "fiado": 3,
             "fluxo_caixa": 4,
@@ -261,15 +261,15 @@ class MainWindow(QMainWindow):
     def _sync_sidebar_buttons(self, index):
         """Sincroniza estado visual dos botões da sidebar com a página ativa."""
         buttons = [
-            self.btn_dashboard, self.btn_caixa, self.btn_estoque,
+            self.btn_caixa, self.btn_dashboard, self.btn_estoque,
             self.btn_fiado, self.btn_fluxo, self.btn_categorias, self.btn_settings
         ]
         for i, btn in enumerate(buttons):
             btn.setChecked(i == index)
 
     def _authorize_protected_page(self, index: int) -> bool:
-        """Valida senha para acesso aos módulos protegidos (Fiado e Fluxo de Caixa)."""
-        protected = {3, 4}
+        """Valida senha para acesso aos módulos protegidos (Dashboard, Fiado e Fluxo de Caixa)."""
+        protected = {1, 3, 4}
         if index not in protected:
             return True
         if index in self._auth_unlocked_pages:
